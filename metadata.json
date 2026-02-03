@@ -1,0 +1,8 @@
+{
+  "name": "TraKr",
+  "description": "A serverless, single-file personal dashboard featuring AI-powered task management, expense tracking, and analytics.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

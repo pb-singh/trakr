@@ -1,0 +1,2942 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TraKr | AI Powered PWA</title>
+    <link rel="icon" href="assets/trakr-logo.png" type="image/png">
+    
+    <!-- PWA Manifest (Data URI) -->
+    <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiRGFpbHlGb2N1cyIs" id="manifest-placeholder">
+    <script>
+        // Inject dynamic manifest with correct icons
+        const manifest = {
+            "name": "TraKr",
+            "short_name": "TraKr",
+            "description": "AI-powered personal dashboard",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#0f172a",
+            "theme_color": "#2563eb",
+            "orientation": "portrait",
+            "icons": [
+                {
+                    "src": "assets/trakr-logo.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                },
+                {
+                    "src": "assets/trakr-logo.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
+        };
+        document.querySelector('#manifest-placeholder').setAttribute('href', 'data:application/manifest+json;base64,' + btoa(JSON.stringify(manifest)));
+    </script>
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        // Re-mapping Indigo to a Premium SaaS Blue
+                        indigo: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6', // Primary Brand Color
+                            600: '#2563eb', // Primary Hover/Active
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                            950: '#172554',
+                        },
+                        // Modernizing the Dark/Surface tokens to Slate (Blue-Grey)
+                        dark: '#020617',    // Deepest Slate
+                        surface: '#0f172a', // Slate 900
+                        
+                        glass: 'rgba(255, 255, 255, 0.05)',
+                        glassBorder: 'rgba(255, 255, 255, 0.08)',
+                    },
+                    borderRadius: {
+                        'xl': '12px',
+                        '2xl': '16px',
+                        '3xl': '24px',
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 20px -5px rgba(59, 130, 246, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Flatpickr (Date/Time Picker) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <!-- SortableJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- jsPDF & AutoTable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- Tesseract.js (OCR) -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            transition: font-size 0.2s ease, background-color 0.3s ease, color 0.3s ease; 
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        body.font-large { font-size: 1.15rem; }
+        body.font-large .text-xs { font-size: 0.85rem; }
+        body.font-large .text-sm { font-size: 1rem; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 10px; }
+        
+        /* Light Theme (Default) - Clean Off-White */
+        :root { 
+            --glass-bg: rgba(255, 255, 255, 0.85); 
+            --glass-border: rgba(255, 255, 255, 0.6); 
+            --glass-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.05); 
+        }
+        
+        /* Dark Theme overrides - Rich Slate */
+        .dark { 
+            --glass-bg: rgba(15, 23, 42, 0.7); 
+            --glass-border: rgba(255, 255, 255, 0.05); 
+            --glass-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.3); 
+        }
+
+        .glass-panel { 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px); 
+            border: 1px solid var(--glass-border); 
+        }
+        
+        .glass-card { 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px); 
+            border: 1px solid var(--glass-border); 
+            box-shadow: var(--glass-shadow); 
+            transition: transform 0.2s ease, box-shadow 0.2s ease; 
+        }
+
+        /* Interactive Elements Transition */
+        button, a, .glass-card {
+            transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 200ms;
+        }
+
+        /* Input Styling - Refined */
+        .glass-input { 
+            background: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            color: #0f172a;
+            transition: all 0.2s ease;
+        }
+        .glass-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .dark .glass-input { 
+            background: rgba(30, 41, 59, 0.5); 
+            border: 1px solid rgba(255,255,255,0.08); 
+            box-shadow: none;
+            color: #f1f5f9;
+        }
+        .dark .glass-input:focus {
+            border-color: #3b82f6;
+            background: rgba(30, 41, 59, 0.8);
+        }
+        
+        .hover-lift:hover { transform: translateY(-3px); box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.08); }
+        .dark .hover-lift:hover { box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.4); }
+
+        [x-cloak] { display: none !important; }
+        
+        /* Calendar Theme Fixes */
+        .flatpickr-calendar { background: #fff !important; border: 1px solid #e2e8f0 !important; box-shadow: 0 10px 40px rgba(0,0,0,0.08) !important; border-radius: 12px !important; }
+        .flatpickr-calendar.dark { background: #1e293b !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important; }
+        
+        .flatpickr-day.selected { background: #3b82f6 !important; border-color: #3b82f6 !important; }
+        
+        /* Note Colors - Slightly softer */
+        .note-bg-default { background: #ffffff; border: 1px solid #e2e8f0; }
+        .dark .note-bg-default { background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255,255,255,0.08); }
+        
+        .note-bg-red { background: #fff1f2; border: 1px solid #fecaca; } 
+        .dark .note-bg-red { background: rgba(127, 29, 29, 0.3); border: 1px solid rgba(127, 29, 29, 0.4); }
+
+        /* Mobile Bottom Nav */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(0,0,0,0.05);
+            padding: 0.75rem 0.5rem;
+            padding-bottom: env(safe-area-inset-bottom, 0.75rem);
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
+        }
+        .dark .mobile-bottom-nav {
+            background: rgba(15, 23, 42, 0.9);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            box-shadow: none;
+        }
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #64748b;
+            font-size: 0.65rem;
+            font-weight: 600;
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            flex: 1;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .dark .mobile-nav-item { color: #94a3b8; }
+        
+        .mobile-nav-item.active { color: #3b82f6; background: #eff6ff; }
+        .dark .mobile-nav-item.active { color: #60a5fa; background: rgba(59, 130, 246, 0.1); }
+
+        @media (max-width: 768px) {
+            .mobile-bottom-nav { display: flex; }
+        }
+    </style>
+    
+    <!-- Failsafe: Force show content if app hangs -->
+    <script>
+        setTimeout(() => {
+            if (!window.appReady) {
+                console.warn("App failed to load in time. Force revealing content.");
+                document.querySelectorAll('[x-cloak]').forEach(el => el.removeAttribute('x-cloak'));
+            }
+        }, 3000);
+    </script>
+<script type="importmap">
+{
+  "imports": {
+    "path": "https://esm.sh/path@^0.12.7",
+    "url": "https://esm.sh/url@^0.11.4",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@google/genai": "https://esm.sh/@google/genai",
+    "chart.js/auto": "https://esm.sh/chart.js/auto",
+    "alpinejs": "https://esm.sh/alpinejs@3.13.3"
+  }
+}
+</script>
+
+<!-- App Logic defined before Alpine -->
+<script type="module">
+    import { GoogleGenAI } from "@google/genai";
+    import Chart from "chart.js/auto";
+    import Alpine from "alpinejs";
+
+    // Polyfill process for browser environments without build step
+    if (typeof process === 'undefined') {
+        window.process = { env: { API_KEY: '' } };
+    }
+    
+    // Make Chart available globally
+    window.Chart = Chart;
+
+    window.app = function() {
+        // Non-reactive Chart instances to prevent Alpine proxy interference
+        // This fixes the "Cannot set properties of undefined (setting 'fullSize')" error
+        let barChartInstance = null;
+        let pieChartInstance = null;
+        let analyticsBarChartInstance = null;
+        let analyticsPieChartInstance = null;
+
+        return {
+            currentTab: 'dashboard',
+            taskTab: 'list',
+            walletTab: 'expense',
+            theme: 'dark',
+            language: 'en',
+            fontSize: 'normal',
+            debugMode: false,
+            isOnline: navigator.onLine,
+            
+            // Audio Recording State
+            recording: false,
+            mediaRecorder: null,
+            audioChunks: [],
+            
+            // Auth & Sync
+            currentUser: null,
+            authForm: { email: '', password: '' },
+            isGcalConnected: false,
+            
+            // 2FA State
+            show2FAModal: false,
+            twoFactorCode: '',
+
+            // Forgot Password State
+            showForgotModal: false,
+            forgotStep: 1, // 1: Email, 2: Code, 3: New Pass
+            resetEmail: '',
+            resetCode: '',
+            resetNewPass: '',
+
+            // Profile
+            profile: { name: 'User', avatar: '', budget: 5000, currency: 'INR', phone: '', phoneVerified: false },
+            isPremium: false,
+            streak: 0,
+            
+            // Feature Flags & Settings
+            settings: {
+                magicSMS: true,
+                voiceCmd: true,
+                ocr: true,
+                pdfReport: true,
+                emailAlerts: true,
+                whatsAppAlerts: false,
+                openaiApiKey: '',
+                geminiApiKey: ''
+            },
+            
+            // Verification State
+            showVerifyModal: false,
+            verifyStep: 'input',
+            otpInput: '',
+            generatedOtp: '',
+
+            // Tasks
+            tasks: [],
+            newTaskInput: '',
+            newTaskPriority: 'Medium',
+            newTaskRepeat: 'None',
+            showAddTask: false,
+            taskSearchQuery: '',
+            taskFilter: 'all',
+            sortMode: 'smart', // 'smart' or 'manual'
+            
+            // Expenses
+            expenses: [],
+            newExpenseAmount: '',
+            newExpenseDesc: '',
+            newExpenseCategory: 'Food',
+            smsInput: '',
+            categories: ['Food', 'Transport', 'Shopping', 'Bills', 'Health', 'Entertainment', 'Other'],
+            incomeCategories: ['Salary', 'Freelance', 'Investment', 'Gift', 'Other'],
+
+            // Udhaar (Debt)
+            udhaarItems: [],
+            udhaarForm: { type: 'given', person: '', amount: '' },
+
+            // Savings Goals
+            savingsGoals: [],
+            newGoalName: '',
+            newGoalTarget: '',
+            selectedGoal: null,
+            fundAmount: '',
+            
+            // Notes
+            notes: [],
+            noteSearch: '',
+            noteColors: [
+                { id: 'note-bg-default', color: '#71717a' },
+                { id: 'note-bg-red', color: '#ef4444' },
+                { id: 'note-bg-orange', color: '#f97316' },
+                { id: 'note-bg-amber', color: '#f59e0b' },
+                { id: 'note-bg-green', color: '#22c55e' },
+                { id: 'note-bg-teal', color: '#14b8a6' },
+                { id: 'note-bg-cyan', color: '#06b6d4' },
+                { id: 'note-bg-blue', color: '#3b82f6' },
+                { id: 'note-bg-indigo', color: '#6366f1' },
+                { id: 'note-bg-purple', color: '#a855f7' },
+                { id: 'note-bg-fuchsia', color: '#d946ef' },
+                { id: 'note-bg-pink', color: '#ec4899' },
+                { id: 'note-bg-rose', color: '#f43f5e' }
+            ],
+
+            // Analytics
+            analyticsRange: 'month',
+            aiAnalyticsResult: '',
+            aiAnalyticsLoading: false,
+            
+            // Timer
+            timerTime: 25 * 60,
+            timerActive: false,
+            timerInterval: null,
+            
+            // AI Helpers
+            aiCoach: '',
+            aiLoading: false,
+            
+            // Modals
+            showPremiumModal: false,
+            showDevModal: false,
+            showGoalModal: false,
+            showFundsModal: false,
+
+            // --- Handlers for Input & Avatar ---
+            uploadAvatar(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.profile.avatar = e.target.result;
+                    this.saveData();
+                };
+                reader.readAsDataURL(file);
+            },
+
+            // --- WhatsApp & Verification Methods ---
+            toggleWhatsApp() {
+                if (this.profile.phoneVerified) {
+                    this.settings.whatsAppAlerts = !this.settings.whatsAppAlerts;
+                    this.saveData();
+                } else {
+                    this.openVerifyModal();
+                }
+            },
+            openVerifyModal() {
+                this.verifyStep = 'input';
+                this.otpInput = '';
+                this.showVerifyModal = true;
+            },
+            sendOtp() {
+                if(!this.profile.phone || this.profile.phone.length < 10) return alert("Invalid Phone Number");
+                this.generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+                this.verifyStep = 'otp';
+                // Simulation
+                alert(`TraKr Alert: Your verification code is ${this.generatedOtp}`);
+            },
+            verifyOtp() {
+                if(this.otpInput === this.generatedOtp) {
+                    this.profile.phoneVerified = true;
+                    this.settings.whatsAppAlerts = true;
+                    this.showVerifyModal = false;
+                    this.saveData();
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#22c55e', '#ffffff'] });
+                } else {
+                    alert("Invalid OTP. Please try again.");
+                }
+            },
+
+            // Helper to get language name for AI prompts
+            getLangName() {
+                const map = { 'en': 'English', 'hi': 'Hindi', 'bn': 'Bengali', 'es': 'Spanish', 'fr': 'French' };
+                return map[this.language] || 'English';
+            },
+            
+            // Helper for Date Locale
+            getLocale() {
+                const map = { 'en': 'en-US', 'hi': 'hi-IN', 'bn': 'bn-IN', 'es': 'es-ES', 'fr': 'fr-FR' };
+                return map[this.language] || 'en-US';
+            },
+
+            // Change Language Action
+            changeLanguage(lang) {
+                this.language = lang;
+                this.saveData();
+                this.aiCoach = ''; // Reset quote so default shows or new one loads
+                this.aiAnalyticsResult = ''; // Reset analysis so user regenerates in new lang
+                this.fetchDailyQuote(); // Re-fetch quote in new language
+            },
+
+            async startVoiceInput() {
+                // OpenAI Whisper Path
+                if (this.settings.openaiApiKey) {
+                    if (this.recording) {
+                        // Stop Recording
+                        if(this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                            this.mediaRecorder.stop();
+                        }
+                        this.recording = false;
+                        return;
+                    }
+
+                    // Start Recording
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        this.mediaRecorder = new MediaRecorder(stream);
+                        this.audioChunks = [];
+                        
+                        this.mediaRecorder.ondataavailable = event => {
+                            this.audioChunks.push(event.data);
+                        };
+                        
+                        this.mediaRecorder.onstop = async () => {
+                            this.aiLoading = true;
+                            const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                            const formData = new FormData();
+                            formData.append("file", audioBlob, "recording.webm");
+                            formData.append("model", "whisper-1");
+                            
+                            try {
+                                const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+                                    method: "POST",
+                                    headers: { "Authorization": `Bearer ${this.settings.openaiApiKey}` },
+                                    body: formData
+                                });
+                                const data = await res.json();
+                                if(data.text) {
+                                    const text = data.text;
+                                    if(this.currentTab === 'tasks') {
+                                        this.newTaskInput = text;
+                                    } else if(this.walletTab === 'expense' || this.walletTab === 'income') {
+                                        this.newExpenseDesc = text;
+                                    }
+                                } else {
+                                    alert("OpenAI Error: " + (data.error?.message || "Unknown"));
+                                }
+                            } catch(e) {
+                                console.error(e);
+                                alert("Transcription failed.");
+                            }
+                            this.aiLoading = false;
+                            
+                            // Stop tracks to release mic
+                            stream.getTracks().forEach(track => track.stop());
+                        };
+                        
+                        this.mediaRecorder.start();
+                        this.recording = true;
+                        
+                    } catch(e) {
+                        alert("Microphone access denied or error: " + e.message);
+                    }
+                    return;
+                }
+
+                // Fallback: Web Speech API
+                if ('webkitSpeechRecognition' in window) {
+                    const recognition = new webkitSpeechRecognition();
+                    recognition.lang = this.getLocale();
+                    recognition.onresult = (event) => {
+                        const text = event.results[0][0].transcript;
+                        if(this.walletTab === 'expense' || this.walletTab === 'income') this.newExpenseDesc = text;
+                        else if(this.currentTab === 'tasks') this.newTaskInput = text;
+                    };
+                    recognition.start();
+                } else {
+                    alert("Voice input not supported. Add OpenAI Key in settings for Whisper support.");
+                }
+            },
+
+            startScanInput() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.capture = 'environment';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if(!file) return;
+                    
+                    this.aiLoading = true;
+                    
+                    // OpenAI Vision Path
+                    if (this.settings.openaiApiKey) {
+                        const reader = new FileReader();
+                        reader.onload = async () => {
+                            const base64 = reader.result;
+                            try {
+                                const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        "Authorization": `Bearer ${this.settings.openaiApiKey}`
+                                    },
+                                    body: JSON.stringify({
+                                        model: "gpt-4o",
+                                        messages: [
+                                            {
+                                                role: "user",
+                                                content: [
+                                                    { type: "text", text: "Extract receipt data into JSON: {amount: number, merchant: string, category: string (Food/Transport/Shopping/Bills/Health/Entertainment/Other)}. Return ONLY JSON." },
+                                                    { type: "image_url", image_url: { url: base64 } }
+                                                ]
+                                            }
+                                        ],
+                                        response_format: { type: "json_object" }
+                                    })
+                                });
+                                const data = await res.json();
+                                if(data.choices && data.choices[0]) {
+                                    const content = JSON.parse(data.choices[0].message.content);
+                                    if(content.amount) this.newExpenseAmount = content.amount;
+                                    if(content.merchant) this.newExpenseDesc = content.merchant;
+                                    if(content.category) this.newExpenseCategory = content.category;
+                                } else {
+                                    alert("OpenAI Vision failed: " + (data.error?.message || "Unknown error"));
+                                }
+                            } catch(err) {
+                                console.error(err);
+                                alert("Scan processing failed.");
+                            }
+                            this.aiLoading = false;
+                        };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+
+                    // Fallback: Tesseract.js
+                    try {
+                        const { createWorker } = Tesseract;
+                        const worker = await createWorker('eng');
+                        const { data: { text } } = await worker.recognize(file);
+                        await worker.terminate();
+                        
+                        // Simple heuristic to find amount
+                        const amountMatch = text.match(/[\$£€₹]\s?(\d+(\.\d{2})?)/) || text.match(/(\d+(\.\d{2})?)/);
+                        if(amountMatch) this.newExpenseAmount = amountMatch[1];
+                        this.newExpenseDesc = "Scanned Receipt";
+                        alert("Scanned Text Found: " + text.substring(0, 50) + "...");
+                    } catch(err) {
+                        console.error(err);
+                        alert("Scan failed. Ensure secure context (HTTPS) or add OpenAI Key.");
+                    }
+                    this.aiLoading = false;
+                };
+                input.click();
+            },
+
+            initApp() {
+                // Load Theme
+                if(localStorage.getItem('theme') === 'light') {
+                    this.theme = 'light';
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.classList.add('light');
+                }
+                
+                // Load Data
+                const saved = localStorage.getItem('dailyLifeOS_data_v1');
+                if(saved) {
+                    const data = JSON.parse(saved);
+                    // Merge profile to keep defaults (handling new fields)
+                    this.profile = { ...this.profile, ...(data.profile || {}) };
+                    this.tasks = data.tasks || [];
+                    this.expenses = data.expenses || [];
+                    this.udhaarItems = data.udhaarItems || [];
+                    this.savingsGoals = data.savingsGoals || [];
+                    this.notes = data.notes || [];
+                    this.settings = { ...this.settings, ...(data.settings || {}) };
+                    this.currentUser = data.currentUser || null;
+                    this.isPremium = data.isPremium || false;
+                    this.unlockedFeatures = data.unlockedFeatures || [];
+                    this.streak = data.streak || 0;
+                    this.fontSize = data.fontSize || 'normal';
+                    this.language = data.language || 'en';
+                }
+
+                // Network Listener
+                window.addEventListener('online', () => this.isOnline = true);
+                window.addEventListener('offline', () => this.isOnline = false);
+
+                // Daily Motivation
+                this.fetchDailyQuote();
+
+                // Charts Init
+                this.$nextTick(() => {
+                    this.initCharts();
+                    
+                    // Watch for tab changes to re-init charts when they become visible
+                    this.$watch('currentTab', (val) => {
+                        if(val === 'dashboard' || val === 'analytics') {
+                            // Delay slightly to allow Alpine x-show transition to complete
+                            setTimeout(() => {
+                                this.initCharts();
+                            }, 350);
+                        }
+                    });
+
+                    // Init Flatpickr
+                    if(this.$refs.taskDatetimePicker) {
+                        flatpickr(this.$refs.taskDatetimePicker, {
+                            enableTime: true,
+                            dateFormat: "Y-m-d H:i",
+                            theme: "dark",
+                            onChange: (selectedDates, dateStr) => {
+                                this.tempDueDate = dateStr;
+                            }
+                        });
+                    }
+                });
+                
+                // Mark as ready
+                window.appReady = true;
+            },
+
+            saveData() {
+                const data = {
+                    profile: this.profile,
+                    tasks: this.tasks,
+                    expenses: this.expenses,
+                    udhaarItems: this.udhaarItems,
+                    savingsGoals: this.savingsGoals,
+                    notes: this.notes,
+                    settings: this.settings,
+                    currentUser: this.currentUser,
+                    isPremium: this.isPremium,
+                    unlockedFeatures: this.unlockedFeatures,
+                    streak: this.streak,
+                    fontSize: this.fontSize,
+                    language: this.language
+                };
+                localStorage.setItem('dailyLifeOS_data_v1', JSON.stringify(data));
+                this.updateCharts();
+
+                // Auto-sync if logged in
+                if(this.currentUser && this.isOnline) {
+                    this.syncData(false); // Push
+                }
+            },
+
+            // --- Sync & Auth ---
+            async authLogin() {
+                if(!this.authForm.email || !this.authForm.password) return alert("Fill all fields");
+                try {
+                    const res = await fetch('api.php?action=login', {
+                        method: 'POST', body: JSON.stringify(this.authForm)
+                    }).then(r=>r.json());
+                    
+                    if(res.status === 'success') {
+                        this.processLoginSuccess(res.user);
+                    } else if (res.status === 'require_2fa') {
+                        this.show2FAModal = true;
+                    } else {
+                        alert(res.error);
+                    }
+                } catch(e) { alert("Connection Error"); }
+            },
+
+            async verify2FA() {
+                try {
+                    const res = await fetch('api.php?action=verify_2fa', {
+                        method: 'POST', body: JSON.stringify({ code: this.twoFactorCode })
+                    }).then(r=>r.json());
+                    
+                    if(res.status === 'success') {
+                        this.show2FAModal = false;
+                        this.twoFactorCode = '';
+                        this.processLoginSuccess(res.user);
+                    } else {
+                        alert(res.error);
+                        if(res.error.includes("Blocked")) window.location.reload();
+                    }
+                } catch(e) { alert("Validation Failed"); }
+            },
+
+            processLoginSuccess(user) {
+                this.currentUser = user;
+                this.isPremium = (user.is_premium == 1);
+                if(user.unlocked_features) {
+                    try { this.unlockedFeatures = JSON.parse(user.unlocked_features); } catch(e) { this.unlockedFeatures = []; }
+                }
+                this.saveData();
+                this.syncData(true);
+            },
+
+            async authRegister() {
+                    if(!this.authForm.email || !this.authForm.password) return alert("Fill all fields");
+                    try {
+                    const res = await fetch('api.php?action=register', {
+                        method: 'POST', body: JSON.stringify(this.authForm)
+                    }).then(r=>r.json());
+                    if(res.status === 'success') alert(res.message);
+                    else alert(res.error);
+                    } catch(e) { alert("Connection Error"); }
+            },
+
+            authLogout() {
+                this.currentUser = null;
+                this.isPremium = false;
+                this.unlockedFeatures = [];
+                this.saveData();
+            },
+
+            async syncData(pull = false) {
+                if(!this.currentUser) return;
+                
+                // Prepare Payload
+                const payload = {
+                    user_id: this.currentUser.id,
+                    force_pull: pull,
+                    data: {
+                        profile: this.profile,
+                        tasks: this.tasks,
+                        expenses: this.expenses,
+                        udhaarItems: this.udhaarItems,
+                        savingsGoals: this.savingsGoals,
+                        notes: this.notes
+                    }
+                };
+                
+                const headers = { 'Content-Type': 'application/json' };
+
+                try {
+                    const res = await fetch('api.php?action=sync', {
+                        method: 'POST', 
+                        headers: headers,
+                        body: JSON.stringify(payload)
+                    }).then(r=>r.json());
+                    
+                    if(pull && res.status === 'synced' && res.data) {
+                        // Merge logic
+                        this.profile = { ...this.profile, ...(res.data.profile || {}) };
+                        this.tasks = res.data.tasks || [];
+                        this.expenses = res.data.expenses || [];
+                        this.udhaarItems = res.data.udhaarItems || [];
+                        this.savingsGoals = res.data.savingsGoals || [];
+                        this.notes = res.data.notes || [];
+                        this.settings = { ...this.settings, ...(res.data.settings || {}) };
+                        
+                        // Handle Gemini API Key Injection
+                        if(this.settings.geminiApiKey) {
+                            window.process.env.API_KEY = this.settings.geminiApiKey;
+                        }
+
+                        // Always update user-level traits
+                        this.isPremium = res.data.isPremium || this.isPremium;
+                        this.unlockedFeatures = res.data.unlockedFeatures || [];
+                        
+                        this.saveData();
+                        // Refresh charts after data load
+                        this.$nextTick(() => {
+                             this.updateCharts();
+                        });
+                    }
+                } catch(e) { console.error("Sync failed", e); }
+            },
+
+            openForgotModal() {
+                this.showForgotModal = true;
+                this.forgotStep = 1;
+                this.resetEmail = '';
+                this.resetCode = '';
+                this.resetNewPass = '';
+                if(this.authForm.email) this.resetEmail = this.authForm.email;
+            },
+
+            async requestResetCode() {
+                if(!this.resetEmail) return alert("Please enter your email");
+                try {
+                    const res = await fetch('api.php?action=forgot_init', {
+                        method: 'POST', body: JSON.stringify({ email: this.resetEmail })
+                    }).then(r=>r.json());
+                    
+                    if(res.status === 'success') {
+                        // In production, this debug alert would be removed
+                        if(res.debug_code) alert('DEMO: Your code is ' + res.debug_code);
+                        this.forgotStep = 2;
+                    } else {
+                        alert(res.error || 'Failed to send code');
+                    }
+                } catch(e) { alert("Network Error"); }
+            },
+
+            async verifyResetCode() {
+                if(!this.resetCode) return alert("Enter code");
+                try {
+                    const res = await fetch('api.php?action=forgot_verify', {
+                        method: 'POST', body: JSON.stringify({ email: this.resetEmail, code: this.resetCode })
+                    }).then(r=>r.json());
+                    
+                    if(res.status === 'success') {
+                        this.forgotStep = 3;
+                    } else {
+                        alert(res.error || 'Invalid Code');
+                    }
+                } catch(e) { alert("Network Error"); }
+            },
+
+            async resetPasswordFinal() {
+                if(!this.resetNewPass || this.resetNewPass.length < 6) return alert("Password too short");
+                try {
+                    const res = await fetch('api.php?action=forgot_reset', {
+                        method: 'POST', body: JSON.stringify({ 
+                            email: this.resetEmail, 
+                            code: this.resetCode, 
+                            password: this.resetNewPass 
+                        })
+                    }).then(r=>r.json());
+                    
+                    if(res.status === 'success') {
+                        alert("Password updated! Please login.");
+                        this.showForgotModal = false;
+                    } else {
+                        alert(res.error || 'Reset failed');
+                    }
+                } catch(e) { alert("Network Error"); }
+            },
+
+            // --- Core Features ---
+            isFeatureUnlocked(id) {
+                // Admins get everything
+                if(this.currentUser && this.currentUser.role === 'admin') return true;
+                // Premium unlocks everything
+                if(this.isPremium) return true;
+                // Check granular unlocks
+                return this.unlockedFeatures.includes(id);
+            },
+
+            buyPremium() {
+                alert("Redirecting to Payment Gateway...");
+                // Simulate
+                setTimeout(() => {
+                    this.isPremium = true;
+                    this.showPremiumModal = false;
+                    this.saveData();
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                }, 1000);
+            },
+
+            t(key) {
+                const dict = {
+                    en: { 
+                        dashboard: 'Dashboard', tasks: 'Tasks', wallet: 'Wallet', 
+                        analytics: 'Analytics', settings: 'Settings', pending: 'Pending Tasks',
+                        urgent_items: 'Urgent Items', spent_today: 'Spent Today', txns: 'txns',
+                        late: 'LATE', done: 'DONE', doing: 'DOING', add_task: 'Add Task',
+                        create_new_task: 'Create New Task', what_next: 'What needs to be done?',
+                        magic_paste: 'Magic Paste (SMS/Text)', add_expense: 'Add Expense',
+                        add_income: 'Add Income', history: 'Recent History',
+                        dev_info: 'Developer Info', life_report: 'Life Report (PDF)',
+                        reset_all: 'Reset All Data',
+                        cloud_sync: 'Cloud Sync',
+                        personalization: 'Personalization',
+                        features: 'Features',
+                        interface: 'Interface',
+                        data_control: 'Data Control',
+                        login_sync: 'Login & Sync',
+                        create_account: 'Create Account',
+                        create_account_desc: 'Sign up to sync data across devices',
+                        forgot_pass: 'Forgot Password?',
+                        or_continue: 'Or continue with',
+                        logged_in: 'Logged in as',
+                        auto_sync: 'Auto-sync enabled',
+                        sync: 'Sync',
+                        logout: 'Logout',
+                        display_name: 'Display Name',
+                        budget_goal: 'Monthly Budget',
+                        currency: 'Currency',
+                        no_features: 'No features activated yet.',
+                        go_premium: 'Go Premium',
+                        text_size: 'Text Size',
+                        language: 'Language',
+                        export_json: 'Export JSON',
+                        import_json: 'Import JSON',
+                        pro_member: 'Pro Member',
+                        offline: 'Offline',
+                        streak: 'Streak',
+                        theme: 'Theme',
+                        focus: 'Focus',
+                        inspiration: 'Inspiration',
+                        due: 'Due',
+                        spending_activity: 'Spending Activity',
+                        this_week: 'This Week',
+                        distribution: 'Distribution',
+                        timeline: 'Timeline',
+                        view_all: 'View All',
+                        notepad: 'Notepad',
+                        filter_tasks: 'Filter Tasks...',
+                        sync_gcal: 'Sync GCal',
+                        all: 'All',
+                        completed: 'Completed',
+                        all_caught_up: 'All caught up!',
+                        udhaar: 'Udhaar',
+                        what_for: 'What is this for?',
+                        ai_advisor: 'AI Financial Advisor',
+                        get_advice: 'Get personalized spending advice.',
+                        savings: 'Savings',
+                        spending_trend: 'Spending Trend',
+                        week: 'Week',
+                        month: 'Month',
+                        year: 'Year',
+                        category_distribution: 'Category Distribution',
+                        breakdown: 'Breakdown',
+                        no_data: 'No data available',
+                        expense: 'Expense',
+                        income: 'Income',
+                        net_balance: 'NET BALANCE',
+                        you_receive: 'You will receive',
+                        you_pay: 'You need to pay',
+                        gave: 'Gave',
+                        took: 'Took',
+                        save: 'Save',
+                        settle: 'Settle',
+                        person_name: 'Person Name',
+                        amount: 'Amount',
+                        default_quote: 'Small steps lead to big results. Add your first task today!'
+                    },
+                    hi: {
+                        dashboard: 'डैशबोर्ड', tasks: 'कार्य', wallet: 'बटुआ', 
+                        analytics: 'विश्लेषण', settings: 'सेटिंग्स', pending: 'लंबित कार्य',
+                        urgent_items: 'ज़रूरी कार्य', spent_today: 'आज का खर्च', txns: 'लेनदेन',
+                        late: 'देर', done: 'पूर्ण', doing: 'जारी', add_task: 'कार्य जोड़ें',
+                        create_new_task: 'नया कार्य बनाएं', what_next: 'आगे क्या करना है?',
+                        magic_paste: 'मैजिक पेस्ट (SMS)', add_expense: 'खर्च जोड़ें',
+                        add_income: 'আয় যোগ করুন', history: 'हाल का इतिहास',
+                        dev_info: 'डेवलपर जानकारी', life_report: 'जीवन रिपोर्ट (PDF)',
+                        reset_all: 'सभी डेटा रीसेट करें', cloud_sync: 'क्लाउड सिंक',
+                        personalization: 'निजीकरण', features: 'सुविधाएं',
+                        interface: 'इंटरफ़ेस', data_control: 'डेटा नियंत्रण',
+                        login_sync: 'लॉगिन और सिंक', create_account: 'खाता बनाएं',
+                        create_account_desc: 'डेटा सिंक करने के लिए साइन अप करें',
+                        forgot_pass: 'पासवर्ड भूल गए?', or_continue: 'या जारी रखें',
+                        logged_in: 'लॉग इन हैं', auto_sync: 'ऑटो-सिंक चालू',
+                        sync: 'सिंक', logout: 'लॉग आउट', display_name: 'प्रदर्शित नाम',
+                        budget_goal: 'मासिक बजट', currency: 'मुद्रा',
+                        no_features: 'अभी कोई सुविधा सक्रिय नहीं है।', go_premium: 'प्रीमियम लें',
+                        text_size: 'टेक्स्ट आकार', language: 'भाषा',
+                        export_json: 'JSON निर्यात', import_json: 'JSON आयात',
+                        pro_member: 'प्रो सदस्य', offline: 'ऑफ़लाइन', streak: 'लगातार',
+                        theme: 'थीम', focus: 'फोकस', inspiration: 'प्रेरणा', due: 'देय',
+                        spending_activity: 'खर्च गतिविधि', this_week: 'इस सप्ताह',
+                        distribution: 'वितरण', timeline: 'समयरेखा', view_all: 'सभी देखें',
+                        notepad: 'नोटपैड', filter_tasks: 'कार्य खोजें...', sync_gcal: 'GCal सिंक',
+                        all: 'सभी', completed: 'पूर्ण', all_caught_up: 'सब हो गया!',
+                        udhaar: 'उधारी', what_for: 'यह किस लिए है?', ai_advisor: 'AI सलाहकार',
+                        get_advice: 'खर्च सलाह प्राप्त करें।', savings: 'बचत',
+                        spending_trend: 'खर्च प्रवृत्ति', week: 'सप्ताह', month: 'महीना',
+                        year: 'वर्ष', category_distribution: 'श्रेणी वितरण', breakdown: 'विवरण',
+                        no_data: 'डेटा उपलब्ध नहीं', expense: 'खर्च', income: 'आय',
+                        net_balance: 'कुल शेष',
+                        you_receive: 'आपको मिलेंगे',
+                        you_pay: 'आपको देने हैं',
+                        gave: 'दिये',
+                        took: 'लिये',
+                        save: 'सहेजें',
+                        settle: 'निपटाना',
+                        person_name: 'व्यक्ति का नाम',
+                        amount: 'राशि',
+                        default_quote: 'छोटे कदम बड़े परिणाम लाते हैं। आज अपना पहला कार्य जोड़ें!'
+                    },
+                    bn: {
+                        dashboard: 'ড্যাশবোর্ড', tasks: 'কাজ', wallet: 'ওয়ালেট', 
+                        analytics: 'অ্যানালিটিক্স', settings: 'সেটিংস', pending: 'অসমাপ্ত কাজ',
+                        urgent_items: 'জরুরী', spent_today: 'আজকের খরচ', txns: 'लेनদেন',
+                        late: 'দেরি', done: 'সম্পন্ন', doing: 'চলছে', add_task: 'কাজ যোগ করুন',
+                        create_new_task: 'নতুন কাজ তৈরি করুন', what_next: 'এরপর কি?',
+                        magic_paste: 'ম্যাজিক পেস্ট (SMS)', add_expense: 'খরচ যোগ করুন',
+                        add_income: 'আয় যোগ করুন', history: 'সাম্প্রতিক ইতিহাস',
+                        dev_info: 'ডেভেলপার তথ্য', life_report: 'লাইফ রিপোর্ট (PDF)',
+                        reset_all: 'সব ডেটা রিসেট', cloud_sync: 'ক্লাউড সিঙ্ক',
+                        personalization: 'ব্যক্তিগতকরণ', features: 'ফিচারস',
+                        interface: 'ইন্টারফেস', data_control: 'ডেটা নিয়ন্ত্রণ',
+                        login_sync: 'লগইন এবং সিঙ্ক', create_account: 'অ্যাকাউন্ট তৈরি',
+                        create_account_desc: 'ডেটা সিঙ্ক করতে সাইন আপ করুন',
+                        forgot_pass: 'পাসওয়ার্ড ভুলে গেছেন?', or_continue: 'অথবা',
+                        logged_in: 'লগইন করা আছে', auto_sync: 'অটো-সিঙ্ক চালু',
+                        sync: 'সিঙ্ক', logout: 'লগআউট', display_name: 'নাম',
+                        budget_goal: 'মাসিক বাজেট', currency: 'মুদ্রা',
+                        no_features: 'কোন ফিচার সক্রিয় নেই।', go_premium: 'প্রিমিয়াম নিন',
+                        text_size: 'টেক্সট সাইজ', language: 'ভাষা',
+                        export_json: 'JSON এক্সপোর্ট', import_json: 'JSON ইম্পোর্ট',
+                        pro_member: 'প্রো সদস্য', offline: 'অফলাইন', streak: 'স্ট্রিক',
+                        theme: 'থিম', focus: 'ফোকাস', inspiration: 'অনুপ্রেরণা', due: 'বাকি',
+                        spending_activity: 'খরচের কার্যকলাপ', this_week: 'এই সপ্তাহ',
+                        distribution: 'বন্টন', timeline: 'টাইমলাইন', view_all: 'সব দেখুন',
+                        notepad: 'নোটপ্যাড', filter_tasks: 'কাজ খুঁজুন...', sync_gcal: 'GCal সিঙ্ক',
+                        all: 'সব', completed: 'সম্পন্ন', all_caught_up: 'সব শেষ!',
+                        udhaar: 'ধার', what_for: 'কিসের জন্য?', ai_advisor: 'AI পরামর্শদাতা',
+                        get_advice: 'খরচের পরামর্শ নিন।', savings: 'সঞ্চয়',
+                        spending_trend: 'খরচের প্রবণতা', week: 'সপ্তাহ', month: 'মাস',
+                        year: 'বছর', category_distribution: 'বিভাগ বন্টন', breakdown: 'ব্রেকডাউন',
+                        no_data: 'তথ্য নেই', expense: 'খরচ', income: 'আয়',
+                        net_balance: 'মোট ব্যালেন্স',
+                        you_receive: 'আপনি পাবেন',
+                        you_pay: 'আপনাকে দিতে হবে',
+                        gave: 'দিয়েছেন',
+                        took: 'নিয়েছেন',
+                        save: 'সংরক্ষণ',
+                        settle: 'নিষ্পত্তি',
+                        person_name: 'ব্যক্তির নাম',
+                        amount: 'পরিমাণ',
+                        default_quote: 'ছোট পদক্ষেপ বড় ফলাফল নিয়ে আসে। আজ আপনার প্রথম কাজ যোগ করুন!'
+                    },
+                    es: {
+                        dashboard: 'Tablero', tasks: 'Tareas', wallet: 'Billetera', 
+                        analytics: 'Analítica', settings: 'Ajustes', pending: 'Pendientes',
+                        urgent_items: 'Urgente', spent_today: 'Gastado Hoy', txns: 'trans',
+                        late: 'TARDE', done: 'HECHO', doing: 'HACIENDO', add_task: 'Añadir Tarea',
+                        create_new_task: 'Crear Tarea', what_next: '¿Qué sigue?',
+                        magic_paste: 'Pegado Mágico', add_expense: 'Añadir Gasto',
+                        add_income: 'Añadir Ingreso', history: 'Historial',
+                        dev_info: 'Info Desarrollador', life_report: 'Reporte de Vida',
+                        reset_all: 'Reiniciar Todo', cloud_sync: 'Sincronización',
+                        personalization: 'Personalización', features: 'Funciones',
+                        interface: 'Interfaz', data_control: 'Datos',
+                        login_sync: 'Iniciar Sesión', create_account: 'Crear Cuenta',
+                        create_account_desc: 'Regístrate para sincronizar',
+                        forgot_pass: '¿Olvidaste contraseña?', or_continue: 'O continuar con',
+                        logged_in: 'Conectado como', auto_sync: 'Auto-sync activado',
+                        sync: 'Sincronizar', logout: 'Cerrar Sesión', display_name: 'Nombre',
+                        budget_goal: 'Presupuesto', currency: 'Moneda',
+                        no_features: 'Sin funciones activas.', go_premium: 'Hazte Premium',
+                        text_size: 'Tamaño Texto', language: 'Idioma',
+                        export_json: 'Exportar JSON', import_json: 'Importar JSON',
+                        pro_member: 'Miembro Pro', offline: 'Desconectado', streak: 'Racha',
+                        theme: 'Tema', focus: 'Enfoque', inspiration: 'Inspiración', due: 'Vence',
+                        spending_activity: 'Actividad de Gastos', this_week: 'Esta Semana',
+                        distribution: 'Distribución', timeline: 'Línea de Tiempo', view_all: 'Ver Todo',
+                        notepad: 'Bloc de Notas', filter_tasks: 'Filtrer...', sync_gcal: 'Sync GCal',
+                        all: 'Todo', completed: 'Completado', all_caught_up: '¡Todo al día!',
+                        udhaar: 'Deuda', what_for: '¿Para qué es?', ai_advisor: 'Asesor IA',
+                        get_advice: 'Consejos de gastos.', savings: 'Ahorros',
+                        spending_trend: 'Tendencia', week: 'Semana', month: 'Mes',
+                        year: 'Año', category_distribution: 'Distribución', breakdown: 'Desglose',
+                        no_data: 'Sin datos', expense: 'Gasto', income: 'Ingreso',
+                        net_balance: 'BALANCE NETO',
+                        you_receive: 'Recibirás',
+                        you_pay: 'Debes pagar',
+                        gave: 'Di',
+                        took: 'Tomé',
+                        save: 'Guardar',
+                        settle: 'Liquidar',
+                        person_name: 'Nombre',
+                        amount: 'Cantidad',
+                        default_quote: 'Los pequeños pasos conducen a grandes resultados. ¡Añade tu primera tarea hoy!'
+                    },
+                    fr: {
+                        dashboard: 'Tableau de bord', tasks: 'Tâches', wallet: 'Portefeuille', 
+                        analytics: 'Analytique', settings: 'Paramètres', pending: 'En attente',
+                        urgent_items: 'Urgent', spent_today: 'Dépensé', txns: 'trans',
+                        late: 'RETARD', done: 'FAIT', doing: 'EN COURS', add_task: 'Ajouter',
+                        create_new_task: 'Nouvelle Tâche', what_next: 'Que faire?',
+                        magic_paste: 'Collage Magique', add_expense: 'Ajouter Dépense',
+                        add_income: 'Ajouter Revenu', history: 'Historique',
+                        dev_info: 'Info Développeur', life_report: 'Rapport de Vie',
+                        reset_all: 'Réinitialiser', cloud_sync: 'Synchro Cloud',
+                        personalization: 'Personnalisation', features: 'Fonctionnalités',
+                        interface: 'Interface', data_control: 'Données',
+                        login_sync: 'Connexion', create_account: 'Créer Compte',
+                        create_account_desc: 'Inscrivez-vous pour synchroniser',
+                        forgot_pass: 'Oublié?', or_continue: 'Ou continuer avec',
+                        logged_in: 'Connecté en tant que', auto_sync: 'Auto-sync activado',
+                        sync: 'Sync', logout: 'Déconnexion', display_name: 'Nom',
+                        budget_goal: 'Budget', currency: 'Devise',
+                        no_features: 'Aucune fonction active.', go_premium: 'Passer Premium',
+                        text_size: 'Taille Texte', language: 'Langue',
+                        export_json: 'Exporter JSON', import_json: 'Importer JSON',
+                        pro_member: 'Membre Pro', offline: 'Hors ligne', streak: 'Série',
+                        theme: 'Thème', focus: 'Focus', inspiration: 'Inspiración', due: 'Pour',
+                        spending_activity: 'Dépenses', this_week: 'Cette Semaine',
+                        distribution: 'Distribution', timeline: 'Chronologie', view_all: 'Voir Tout',
+                        notepad: 'Bloc-notes', filter_tasks: 'Filtrer...', sync_gcal: 'Sync GCal',
+                        all: 'Tout', completed: 'Terminé', all_caught_up: 'Tout est fait!',
+                        udhaar: 'Dette', what_for: 'C\'est pour quoi?', ai_advisor: 'Conseiller IA',
+                        get_advice: 'Conseils de dépenses.', savings: 'Épargne',
+                        spending_trend: 'Tendance', week: 'Semaine', month: 'Mois',
+                        year: 'Année', category_distribution: 'Distribution', breakdown: 'Détail',
+                        no_data: 'Pas de données', expense: 'Dépense', income: 'Revenu',
+                        net_balance: 'SOLDE NET',
+                        you_receive: 'Vous recevrez',
+                        you_pay: 'Vous devez',
+                        gave: 'Donné',
+                        took: 'Pris',
+                        save: 'Sauver',
+                        settle: 'Régler',
+                        person_name: 'Nom',
+                        amount: 'Montant',
+                        default_quote: 'Les petits pas mènent aux grands résultats. Ajoutez votre première tâche aujourd\'hui !'
+                    }
+                };
+                const lang = dict[this.language] || dict['en'];
+                return lang[key] || key;
+            },
+
+            formatCurrency(amount) {
+                return new Intl.NumberFormat(this.language === 'en' ? 'en-US' : 'en-IN', {
+                    style: 'currency', currency: this.profile.currency
+                }).format(amount);
+            },
+            
+            getCurrencySymbol() {
+                    return (0).toLocaleString(this.language === 'en' ? 'en-US' : 'en-IN', {
+                    style: 'currency', currency: this.profile.currency, minimumFractionDigits: 0, maximumFractionDigits: 0
+                }).replace(/\d/g, '').trim();
+            },
+
+            formatDate(dateStr) {
+                return new Date(dateStr).toLocaleDateString();
+            },
+
+            // --- Task Management ---
+            addTask() {
+                if(!this.newTaskInput) return;
+                
+                const dueDate = this.tempDueDate ? this.tempDueDate.split(' ')[0] : new Date().toISOString().split('T')[0];
+                const dueTime = this.tempDueDate ? this.tempDueDate.split(' ')[1] : '12:00';
+
+                this.tasks.push({
+                    id: Date.now(),
+                    text: this.newTaskInput,
+                    completed: false,
+                    priority: this.newTaskPriority,
+                    repeat: this.newTaskRepeat,
+                    dueDate: dueDate,
+                    dueTime: dueTime,
+                    created: new Date().toISOString()
+                });
+                this.newTaskInput = '';
+                this.tempDueDate = '';
+                this.saveData();
+                this.showAddTask = false;
+                confetti({ particleCount: 30, spread: 50, origin: { y: 0.7 } });
+            },
+
+            deleteTask(id) {
+                this.tasks = this.tasks.filter(t => t.id !== id);
+                this.saveData();
+            },
+
+            toggleTask(id) {
+                const t = this.tasks.find(t => t.id === id);
+                if(t) {
+                    t.completed = !t.completed;
+                    if(t.completed) confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: ['#6366f1', '#10b981'] });
+                    this.saveData();
+                }
+            },
+            
+            isOverdue(task) {
+                if(task.completed) return false;
+                const due = new Date(task.dueDate + 'T' + (task.dueTime || '23:59'));
+                return due < new Date();
+            },
+
+            get filteredTasks() {
+                let list = this.tasks;
+                // Filter
+                if(this.taskFilter === 'pending') list = list.filter(t => !t.completed);
+                if(this.taskFilter === 'completed') list = list.filter(t => t.completed);
+                if(this.taskSearchQuery) list = list.filter(t => t.text.toLowerCase().includes(this.taskSearchQuery.toLowerCase()));
+
+                // Sort
+                if(this.sortMode === 'smart') {
+                    // High priority first, then due date
+                    list = list.sort((a,b) => {
+                        if(a.priority === 'High' && b.priority !== 'High') return -1;
+                        if(a.priority !== 'High' && b.priority === 'High') return 1;
+                        return new Date(a.dueDate) - new Date(b.dueDate);
+                    });
+                }
+                return list;
+            },
+            
+            get pendingTasksCount() { return this.tasks.filter(t => !t.completed).length; },
+            get urgentTasksCount() { return this.tasks.filter(t => !t.completed && t.priority === 'High').length; },
+
+            // --- AI Task Features ---
+            async suggestTaskDetails() {
+                if(!this.newTaskInput) return;
+                this.aiLoading = true;
+                try {
+                    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                    const model = ai.models.generateContent({
+                         model: 'gemini-3-flash-preview',
+                         contents: `Analyze this task: "${this.newTaskInput}". Return JSON with: priority (High/Medium/Low), dueDate (YYYY-MM-DD, assume today is ${new Date().toISOString().split('T')[0]}).`
+                    });
+                    const result = await model;
+                    const text = result.response.text;
+                    // Naive JSON parse
+                    const jsonMatch = text.match(/\{.*\}/s);
+                    if(jsonMatch) {
+                        const data = JSON.parse(jsonMatch[0]);
+                        if(data.priority) this.newTaskPriority = data.priority;
+                        // We don't auto-set date to avoid confusion, but we could
+                    }
+                } catch(e) { console.error(e); }
+                this.aiLoading = false;
+            },
+
+            async polishTask() {
+                if(!this.newTaskInput) return;
+                this.aiLoading = true;
+                try {
+                        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                        const model = ai.models.generateContent({
+                             model: 'gemini-3-flash-preview',
+                             contents: `Rewrite this task to be clear and actionable, max 10 words, in ${this.getLangName()}: "${this.newTaskInput}"`
+                        });
+                        const result = await model;
+                        this.newTaskInput = result.response.text.trim();
+                } catch(e) {}
+                this.aiLoading = false;
+            },
+
+            // --- Wallet Features ---
+            addTransaction() {
+                if(!this.newExpenseAmount || !this.newExpenseDesc) return;
+                this.expenses.push({
+                    id: Date.now(),
+                    amount: parseFloat(this.newExpenseAmount),
+                    desc: this.newExpenseDesc,
+                    category: this.newExpenseCategory,
+                    type: this.walletTab === 'income' ? 'income' : 'expense',
+                    date: new Date().toISOString()
+                });
+                this.newExpenseAmount = '';
+                this.newExpenseDesc = '';
+                this.saveData();
+            },
+
+            deleteExpense(id) {
+                this.expenses = this.expenses.filter(e => e.id !== id);
+                this.saveData();
+            },
+
+            getCategoryIcon(cat) {
+                const icons = { 'Food': '🍔', 'Transport': '🚗', 'Shopping': '🛍️', 'Salary': '💰' };
+                return icons[cat] || '📄';
+            },
+
+            get spentToday() {
+                const today = new Date().toISOString().split('T')[0];
+                return this.expenses
+                    .filter(e => e.type === 'expense' && e.date.startsWith(today))
+                    .reduce((acc, curr) => acc + curr.amount, 0);
+            },
+
+            get transactionsToday() {
+                const today = new Date().toISOString().split('T')[0];
+                return this.expenses.filter(e => e.date.startsWith(today)).length;
+            },
+            
+            // Udhaar
+            addUdhaar() {
+                if(!this.udhaarForm.person || !this.udhaarForm.amount) return;
+                this.udhaarItems.push({
+                    person: this.udhaarForm.person,
+                    amount: parseFloat(this.udhaarForm.amount),
+                    type: this.udhaarForm.type,
+                    date: new Date().toISOString()
+                });
+                this.udhaarForm.person = '';
+                this.udhaarForm.amount = '';
+                this.saveData();
+            },
+            
+            settleUdhaar(index) {
+                this.udhaarItems.splice(index, 1);
+                this.saveData();
+            },
+
+            get netUdhaar() {
+                const given = this.udhaarItems.filter(i => i.type === 'given').reduce((a,c) => a+c.amount, 0);
+                const taken = this.udhaarItems.filter(i => i.type === 'taken').reduce((a,c) => a+c.amount, 0);
+                return given - taken;
+            },
+
+            // Savings Goals
+            addSavingsGoal() {
+                if(!this.newGoalName || !this.newGoalTarget) return;
+                this.savingsGoals.push({
+                    name: this.newGoalName,
+                    target: parseFloat(this.newGoalTarget),
+                    current: 0
+                });
+                this.newGoalName = '';
+                this.newGoalTarget = '';
+                this.showGoalModal = false;
+                this.saveData();
+            },
+
+            addFundsToGoal() {
+                if(!this.selectedGoal || !this.fundAmount) return;
+                this.selectedGoal.current += parseFloat(this.fundAmount);
+                // Log as expense
+                this.expenses.push({
+                    id: Date.now(),
+                    amount: parseFloat(this.fundAmount),
+                    desc: `Transfer to ${this.selectedGoal.name}`,
+                    category: 'Savings',
+                    type: 'expense',
+                    date: new Date().toISOString()
+                });
+                this.showFundsModal = false;
+                this.saveData();
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            },
+
+            deleteGoal() {
+                if(this.selectedGoal) {
+                    this.savingsGoals = this.savingsGoals.filter(g => g !== this.selectedGoal);
+                    this.showFundsModal = false;
+                    this.saveData();
+                }
+            },
+
+            // --- AI Magic Features ---
+            async parseMagicSMS() {
+                if(!this.smsInput || !this.isFeatureUnlocked('magicSMS')) return;
+                this.aiLoading = true;
+                try {
+                    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                    const model = ai.models.generateContent({
+                         model: 'gemini-3-flash-preview',
+                         contents: `Extract finance data from this SMS: "${this.smsInput}". Return JSON with: amount (number), merchant (string), category (one of [Food,Transport,Shopping,Bills]).`
+                    });
+                    const result = await model;
+                    const text = result.response.text;
+                    const jsonMatch = text.match(/\{.*\}/s);
+                    if(jsonMatch) {
+                        const data = JSON.parse(jsonMatch[0]);
+                        this.newExpenseAmount = data.amount;
+                        this.newExpenseDesc = data.merchant;
+                        this.newExpenseCategory = data.category || 'Other';
+                        this.smsInput = '';
+                        alert("Magic Paste Successful!");
+                    }
+                } catch(e) { console.error(e); }
+                this.aiLoading = false;
+            },
+
+            async generateFinancialAnalysis() {
+                this.aiAnalyticsLoading = true;
+                try {
+                    // Aggregate data
+                    const summary = this.expenses.map(e => `${e.date}: ${e.type} ${e.amount} on ${e.category}`).join('\n');
+                    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                    const model = ai.models.generateContent({
+                         model: 'gemini-3-flash-preview',
+                         contents: `Analyze these finances and give 3 short bullet point tips in ${this.getLangName()}:\n${summary}`
+                    });
+                    const result = await model;
+                    this.aiAnalyticsResult = result.response.text.replace(/\n/g, '<br>');
+                } catch(e) { this.aiAnalyticsResult = "Could not generate analysis."; }
+                this.aiAnalyticsLoading = false;
+            },
+
+            // --- Daily Quote ---
+            async fetchDailyQuote() {
+                try {
+                    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                    const model = ai.models.generateContent({
+                         model: 'gemini-3-flash-preview',
+                         contents: `Give me a short, unique motivational quote for productivity in ${this.getLangName()}.`
+                    });
+                    const result = await model;
+                    this.aiCoach = result.response.text.trim();
+                } catch(e) {}
+            },
+
+            // --- Analytics Getters ---
+            get analyticsTotalIncome() { return this.expenses.filter(e => e.type === 'income').reduce((a,c) => a+c.amount, 0); },
+            get analyticsTotalExpense() { return this.expenses.filter(e => e.type === 'expense').reduce((a,c) => a+c.amount, 0); },
+            get analyticsSavingsRate() { 
+                const inc = this.analyticsTotalIncome;
+                return inc > 0 ? ((inc - this.analyticsTotalExpense) / inc) * 100 : 0; 
+            },
+            get analyticsCategoryBreakdown() {
+                const breakdown = {};
+                const total = this.analyticsTotalExpense;
+                this.expenses.filter(e => e.type === 'expense').forEach(e => {
+                    breakdown[e.category] = (breakdown[e.category] || 0) + e.amount;
+                });
+                return Object.keys(breakdown).map(cat => ({
+                    name: cat,
+                    total: breakdown[cat],
+                    percentage: total > 0 ? Math.round((breakdown[cat] / total) * 100) : 0
+                })).sort((a,b) => b.total - a.total);
+            },
+            // NEW GETTERS FOR ANALYTICS UPDATE
+            get budgetProgress() {
+                if (!this.profile.budget || this.profile.budget == 0) return 0;
+                return (this.analyticsTotalExpense / this.profile.budget) * 100;
+            },
+            get financialHealthScore() {
+                let score = 50;
+                // Savings ratio (Max 40 pts)
+                if (this.analyticsTotalIncome > 0) {
+                    const savingsRate = (this.analyticsTotalIncome - this.analyticsTotalExpense) / this.analyticsTotalIncome;
+                    if (savingsRate > 0.5) score += 40;
+                    else if (savingsRate > 0.2) score += 20;
+                    else if (savingsRate > 0) score += 10;
+                    else score -= 10;
+                }
+                // Budget adherence (Max 10 pts)
+                if (this.profile.budget > 0) {
+                    if (this.analyticsTotalExpense <= this.profile.budget) score += 10;
+                    else score -= 10;
+                }
+                // Debt/Udhaar (Max -10 pts)
+                if (this.netUdhaar < 0) score -= 10;
+                
+                return Math.max(0, Math.min(100, score));
+            },
+            get topExpenses() {
+                return this.expenses
+                    .filter(e => e.type === 'expense')
+                    .sort((a,b) => b.amount - a.amount)
+                    .slice(0, 5);
+            },
+            get productivityScore() {
+                if (this.tasks.length === 0) return 0;
+                const completed = this.tasks.filter(t => t.completed).length;
+                return Math.round((completed / this.tasks.length) * 100);
+            },
+
+            // --- Charts ---
+            initCharts() {
+                // Helper to check visibility
+                const isVisible = (id) => {
+                    const el = document.getElementById(id);
+                    // Strict visibility check: must have layout dimensions (offsetParent is null if display:none)
+                    return el && el.offsetParent !== null;
+                };
+
+                // Clean up previous instances to prevent errors
+                if(barChartInstance) { barChartInstance.destroy(); barChartInstance = null; }
+                if(pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
+                if(analyticsBarChartInstance) { analyticsBarChartInstance.destroy(); analyticsBarChartInstance = null; }
+                if(analyticsPieChartInstance) { analyticsPieChartInstance.destroy(); analyticsPieChartInstance = null; }
+
+                // Bar Chart - Only init if visible
+                if (isVisible('barChart')) {
+                    const ctx1 = document.getElementById('barChart');
+                    barChartInstance = new Chart(ctx1, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                            datasets: [{ label: 'Expense', data: [0,0,0,0,0,0,0], backgroundColor: '#3b82f6', borderRadius: 6 }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false, grid: { display: false } }, x: { grid: { display: false } } } }
+                    });
+                }
+                
+                // Pie Chart
+                if (isVisible('pieChart')) {
+                    const ctx2 = document.getElementById('pieChart');
+                    pieChartInstance = new Chart(ctx2, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Food', 'Bills', 'Other'],
+                            datasets: [{ data: [30, 50, 20], backgroundColor: ['#3b82f6', '#f43f5e', '#10b981'], borderWidth: 0 }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+                    });
+                }
+
+                // Analytics Charts
+                if (isVisible('analyticsBarChart')) {
+                    const ctx3 = document.getElementById('analyticsBarChart');
+                    analyticsBarChartInstance = new Chart(ctx3, {
+                        type: 'line',
+                        data: { labels: [], datasets: [{ label: 'Trend', data: [], borderColor: '#3b82f6', tension: 0.4 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+                    });
+                }
+
+                // Analytics Pie Chart
+                if (isVisible('analyticsPieChart')) {
+                    const ctx4 = document.getElementById('analyticsPieChart');
+                    analyticsPieChartInstance = new Chart(ctx4, {
+                        type: 'doughnut',
+                        data: {
+                            labels: [],
+                            datasets: [{ data: [], backgroundColor: ['#3b82f6', '#f43f5e', '#10b981', '#f59e0b', '#ec4899'], borderWidth: 0 }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+                    });
+                }
+
+                // Populate with data
+                this.updateCharts();
+            },
+
+            updateCharts() {
+                // Dummy update logic - in real app, aggregate this.expenses by date
+                if(pieChartInstance) {
+                        const data = this.analyticsCategoryBreakdown;
+                        pieChartInstance.data.labels = data.map(d => d.name);
+                        pieChartInstance.data.datasets[0].data = data.map(d => d.total);
+                        pieChartInstance.update();
+                }
+                if(analyticsBarChartInstance) {
+                    // Populate with real history
+                    const last7 = this.expenses.slice(-7).map(e => e.amount);
+                    analyticsBarChartInstance.data.datasets[0].data = last7;
+                    analyticsBarChartInstance.update();
+                }
+                 if(analyticsPieChartInstance) {
+                        const data = this.analyticsCategoryBreakdown;
+                        analyticsPieChartInstance.data.labels = data.map(d => d.name);
+                        analyticsPieChartInstance.data.datasets[0].data = data.map(d => d.total);
+                        analyticsPieChartInstance.update();
+                }
+            },
+
+            // --- Notes ---
+            get filteredNotes() {
+                return this.notes.filter(n => n.title.toLowerCase().includes(this.noteSearch.toLowerCase()));
+            },
+            addNoteFromInput(title, content, type, items, color) {
+                if(!title && !content && items.length === 0) return;
+                this.notes.unshift({
+                    id: Date.now(),
+                    title: title || 'Untitled',
+                    content: content,
+                    type: type,
+                    items: items,
+                    color: color,
+                    pinned: false,
+                    created: new Date().toISOString()
+                });
+                this.saveData();
+            },
+            saveNoteData() { this.saveData(); },
+            updateNoteColor(id, color) {
+                const n = this.notes.find(n => n.id === id);
+                if(n) { n.color = color; this.saveData(); }
+            },
+            togglePinNote(id) {
+                const n = this.notes.find(n => n.id === id);
+                if(n) { n.pinned = !n.pinned; this.saveData(); }
+            },
+            archiveNote(id) {
+                this.notes = this.notes.filter(n => n.id !== id);
+                this.saveData();
+            },
+
+            // --- Data Control ---
+            exportData() {
+                const dataStr = JSON.stringify(localStorage.getItem('dailyLifeOS_data_v1'));
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const link = document.createElement('a');
+                link.setAttribute('href', dataUri);
+                link.setAttribute('download', 'trakr_backup.json');
+                link.click();
+            },
+
+            importData(event) {
+                const file = event.target.files[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const raw = JSON.parse(e.target.result); // Double parse because of export format
+                        localStorage.setItem('dailyLifeOS_data_v1', raw);
+                        window.location.reload();
+                    } catch(err) { alert("Invalid File"); }
+                };
+                reader.readAsText(file);
+            },
+
+            generatePDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.setFontSize(20);
+                doc.text("TraKr Life Report", 10, 10);
+                doc.setFontSize(12);
+                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 10, 20);
+                
+                doc.text("Tasks Pending: " + this.pendingTasksCount, 10, 30);
+                doc.text("Total Spent: " + this.formatCurrency(this.analyticsTotalExpense), 10, 40);
+                
+                const rows = this.expenses.map(e => [e.date.split('T')[0], e.desc, e.category, e.amount]);
+                doc.autoTable({
+                    head: [['Date', 'Description', 'Category', 'Amount']],
+                    body: rows,
+                    startY: 50
+                });
+                
+                doc.save("trakr-report.pdf");
+            },
+
+            hardReset() {
+                localStorage.removeItem('dailyLifeOS_data_v1');
+                window.location.reload();
+            },
+
+            // --- Misc ---
+            toggleTheme() {
+                this.theme = this.theme === 'dark' ? 'light' : 'dark';
+                if(this.theme === 'dark') document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', this.theme);
+            },
+            
+            setFontSize(size) {
+                this.fontSize = size;
+            },
+
+            formatTimer(seconds) {
+                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const s = (seconds % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            },
+            
+            toggleTimer() {
+                this.timerActive = !this.timerActive;
+                if(this.timerActive) {
+                    this.timerInterval = setInterval(() => {
+                        if(this.timerTime > 0) this.timerTime--;
+                        else { this.timerActive = false; clearInterval(this.timerInterval); alert("Focus Time Over!"); }
+                    }, 1000);
+                } else {
+                    clearInterval(this.timerInterval);
+                }
+            },
+            
+            resetTimer() {
+                this.timerActive = false;
+                clearInterval(this.timerInterval);
+                this.timerTime = 25 * 60;
+            },
+
+            get activityFeed() {
+                const combined = [
+                    ...this.tasks.map(t => ({...t, type: 'task', date: t.created})),
+                    ...this.expenses.map(e => ({...e, type: 'expense', text: e.desc, date: e.date, expenseType: e.type}))
+                ];
+                return combined.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+            },
+
+            navItems: [
+                { id: 'dashboard', icon: 'fa-solid fa-house' },
+                { id: 'tasks', icon: 'fa-solid fa-list-check' },
+                { id: 'wallet', icon: 'fa-solid fa-wallet' },
+                { id: 'analytics', icon: 'fa-solid fa-chart-pie' },
+                { id: 'settings', icon: 'fa-solid fa-gear' }
+            ]
+        }
+    }
+    
+    // Start Alpine manually after defining app
+    Alpine.start();
+</script>
+
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-[#f8fafc] dark:bg-[#020617] min-h-screen text-slate-800 dark:text-zinc-200 selection:bg-indigo-500 selection:text-white overflow-x-hidden transition-colors duration-500"
+      :class="{ 'font-large': fontSize === 'large', 'debug-mode': debugMode }"
+      x-data="app()" x-init="initApp()" x-cloak>
+      
+    <!-- Dynamic Background Mesh -->
+    <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <!-- Light Mode Blobs -->
+        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-300/20 dark:bg-indigo-500/30 rounded-full blur-[120px] animate-pulse" style="animation-duration: 8s;"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-rose-300/20 dark:bg-rose-500/30 rounded-full blur-[120px] animate-pulse" style="animation-duration: 10s;"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="flex h-screen overflow-hidden relative z-10">
+        
+        <!-- Sidebar (Desktop) -->
+        <aside class="hidden md:flex flex-col w-72 glass-panel z-20 m-6 rounded-3xl h-[calc(100vh-3rem)] transition-all duration-300 shadow-2xl">
+            <!-- Header / Profile Section -->
+            <div class="p-8 pb-4">
+                <div class="flex items-center gap-3 p-2 -ml-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                        <template x-if="profile.avatar">
+                            <img :src="profile.avatar" class="w-full h-full object-cover rounded-2xl">
+                        </template>
+                        <template x-if="!profile.avatar">
+                            <i class="fa-solid fa-cube text-white text-xl"></i>
+                        </template>
+                    </div>
+                    <div class="flex-1 text-left">
+                        <h1 class="font-bold text-slate-800 dark:text-white text-base tracking-tight truncate max-w-[120px]" x-text="profile.name"></h1>
+                        <span class="text-[10px] font-bold tracking-widest uppercase bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/20">
+                            Personal
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Offline Indicator (Desktop) -->
+            <div x-show="!isOnline" x-transition class="mx-8 mb-4 p-3 bg-amber-50 border border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/20 rounded-2xl flex items-center gap-3 text-amber-600 dark:text-amber-400">
+                <div class="w-2 h-2 bg-amber-500 rounded-full animate-ping"></div>
+                <span class="text-xs font-bold tracking-wide" x-text="t('offline')">Offline</span>
+            </div>
+
+            <!-- Streak Indicator -->
+            <div class="mx-8 mb-6 flex items-center justify-between bg-gradient-to-r from-orange-50 to-rose-50 dark:from-orange-500/10 dark:to-rose-500/10 border border-orange-100 dark:border-orange-500/10 rounded-2xl p-3 px-4 group cursor-help">
+                <div class="flex items-center gap-3 text-orange-500">
+                    <i class="fa-solid fa-fire-flame-curved text-lg group-hover:scale-125 transition-transform duration-300"></i>
+                    <span class="text-xs font-bold uppercase tracking-wider" x-text="t('streak')">Streak</span>
+                </div>
+                <span class="font-bold text-orange-600 dark:text-orange-400 text-base" x-text="streak"></span>
+            </div>
+
+            <nav class="flex-1 px-4 space-y-2 overflow-y-auto no-scrollbar">
+                <template x-for="item in navItems" :key="item.id">
+                    <button @click="currentTab = item.id" 
+                            :class="currentTab === item.id ? 'bg-white text-indigo-600 shadow-lg shadow-indigo-100 border border-indigo-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:border-white/10' : 'text-slate-500 hover:bg-white/60 hover:text-slate-700 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-zinc-200'"
+                            class="w-full flex items-center gap-4 px-6 py-3.5 rounded-2xl transition-all duration-200 group">
+                        <i :class="item.icon" class="text-lg w-6 text-center transition-transform group-hover:scale-110" :class="currentTab === item.id ? 'text-indigo-600 dark:text-indigo-400' : ''"></i>
+                        <span class="font-semibold text-sm tracking-wide" x-text="t(item.id)"></span>
+                        <div x-show="currentTab === item.id" class="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                    </button>
+                </template>
+            </nav>
+
+            <div class="p-6 border-t border-slate-200 dark:border-white/5">
+                <!-- Theme Toggle -->
+                <button @click="toggleTheme" class="w-full mb-4 flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-100 dark:bg-zinc-900 hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span x-text="t('theme')">Theme</span>
+                    <i class="fa-solid" :class="theme === 'dark' ? 'fa-sun text-amber-400' : 'fa-moon text-indigo-400'"></i>
+                </button>
+
+                <!-- Focus Timer Widget -->
+                <div class="glass-card p-5 rounded-3xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-500/5 dark:to-purple-500/5 border-indigo-100 dark:border-indigo-500/10">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-500" x-text="t('focus')">Focus</span>
+                        <div class="w-2 h-2 rounded-full shadow-[0_0_8px_currentColor]" :class="timerActive ? 'bg-green-500 text-green-500 animate-pulse' : 'bg-slate-400 text-slate-400 dark:bg-zinc-500 dark:text-zinc-500'"></div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="text-2xl font-mono font-bold text-slate-800 dark:text-white tracking-tighter" x-text="formatTimer(timerTime)"></div>
+                        <div class="flex gap-2">
+                            <button @click="toggleTimer" class="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center hover:scale-110 hover:shadow-lg hover:shadow-indigo-500/40 transition-all">
+                                <i class="fa-solid text-xs" :class="timerActive ? 'fa-pause' : 'fa-play pl-0.5'"></i>
+                            </button>
+                            <button @click="resetTimer" class="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 flex items-center justify-center hover:scale-110 transition-all">
+                                <i class="fa-solid fa-rotate-right text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto relative z-10 p-4 md:p-8 pb-28 md:pb-8 scroll-smooth">
+            
+            <!-- Mobile Header -->
+            <header class="md:hidden flex flex-col gap-3 mb-8 glass-card p-5 rounded-3xl sticky top-2 z-50 border-t border-white/20">
+                <div class="flex justify-between items-center w-full">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
+                             <template x-if="profile.avatar">
+                                <img :src="profile.avatar" class="w-full h-full object-cover rounded-2xl">
+                            </template>
+                            <template x-if="!profile.avatar">
+                                <i class="fa-solid fa-cube text-white"></i>
+                            </template>
+                        </div>
+                        <div class="flex flex-col relative">
+                            <span class="font-bold text-slate-900 dark:text-white leading-tight block" x-text="profile.name"></span>
+                            <div class="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-zinc-500 font-bold uppercase tracking-wider">
+                                Personal
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button @click="toggleTheme" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-slate-500 dark:text-zinc-400">
+                            <i class="fa-solid" :class="theme === 'dark' ? 'fa-sun' : 'fa-moon'"></i>
+                        </button>
+                        <button @click="currentTab = 'settings'" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-slate-500 dark:text-zinc-400"><i class="fa-solid fa-gear"></i></button>
+                    </div>
+                </div>
+                <div x-show="!isOnline" x-transition class="w-full text-center text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 py-2 rounded-xl">
+                    <i class="fa-solid fa-wifi-slash mr-1"></i> <span x-text="t('offline')">OFFLINE</span>
+                </div>
+            </header>
+
+            <!-- Dashboard View -->
+            <div x-show="currentTab === 'dashboard'" class="space-y-6" x-transition.opacity.duration.300ms>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Widget 1: Daily Inspiration -->
+                    <div class="col-span-1 md:col-span-2 glass-card rounded-3xl p-8 relative overflow-hidden group hover-lift bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-500/10 dark:to-purple-500/5">
+                        <div class="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-3xl"></div>
+                        <div class="relative z-10">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-widest" x-text="t('inspiration')">Inspiration</div>
+                                <span class="text-xs text-slate-500 dark:text-zinc-400 font-medium" x-text="new Date().toLocaleDateString(getLocale(), { weekday: 'long', month: 'long', day: 'numeric' })"></span>
+                            </div>
+                            <h2 class="text-xl md:text-2xl font-serif italic text-slate-800 dark:text-zinc-100 leading-relaxed opacity-90">
+                                "<span x-text="aiCoach || t('default_quote')"></span>"
+                            </h2>
+                        </div>
+                    </div>
+
+                    <!-- Widget 2: Pending Tasks -->
+                    <div class="glass-card rounded-3xl p-6 flex flex-col justify-between hover-lift border-t-4 border-t-blue-500 bg-gradient-to-br from-white to-blue-50/50 dark:from-transparent dark:to-transparent">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-slate-500 dark:text-zinc-400 text-xs font-bold uppercase tracking-wider" x-text="t('pending')">Pending</p>
+                                <h3 class="text-4xl font-bold text-slate-900 dark:text-white mt-2" x-text="pendingTasksCount"></h3>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                <i class="fa-solid fa-layer-group text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-200 dark:border-white/5 text-xs font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                            <span x-text="urgentTasksCount"></span> <span x-text="t('urgent_items')">urgent items</span>
+                        </div>
+                    </div>
+
+                    <!-- Widget 3: Spent Today -->
+                    <div class="glass-card rounded-3xl p-6 flex flex-col justify-between hover-lift border-t-4 border-t-emerald-500 bg-gradient-to-br from-white to-emerald-50/50 dark:from-transparent dark:to-transparent">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-slate-500 dark:text-zinc-400 text-xs font-bold uppercase tracking-wider" x-text="t('spent_today')">Spent Today</p>
+                                <h3 class="text-4xl font-bold text-slate-900 dark:text-white mt-2" x-text="formatCurrency(spentToday)"></h3>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                <i class="fa-solid fa-wallet text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-200 dark:border-white/5 text-xs font-medium flex justify-between">
+                            <span class="text-slate-500 dark:text-zinc-400"><span x-text="transactionsToday"></span> <span x-text="t('txns')">txns</span></span>
+                            <span class="" :class="netUdhaar >= 0 ? 'text-emerald-500' : 'text-red-500'" x-text="(netUdhaar >= 0 ? '+' : '-') + formatCurrency(Math.abs(netUdhaar)) + ' ' + t('due')"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="glass-card p-8 rounded-3xl lg:col-span-2 hover-lift">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-bold text-slate-900 dark:text-white" x-text="t('spending_activity')">Spending Activity</h3>
+                            <div class="flex gap-2">
+                                <span class="w-3 h-3 rounded-full bg-indigo-500"></span>
+                                <span class="text-xs text-slate-500 dark:text-zinc-500" x-text="t('this_week')">This Week</span>
+                            </div>
+                        </div>
+                        <div class="relative h-64 w-full">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-card p-8 rounded-3xl hover-lift">
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-6" x-text="t('distribution')">Distribution</h3>
+                        <div class="relative h-64 w-full flex items-center justify-center">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Feed -->
+                <div class="glass-card rounded-3xl p-8 hover-lift">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white" x-text="t('timeline')">Timeline</h3>
+                        <button @click="currentTab = 'tasks'" class="text-xs font-bold text-indigo-500 hover:text-indigo-400 uppercase tracking-wider" x-text="t('view_all')">View All</button>
+                    </div>
+                    
+                    <div class="relative border-l-2 border-slate-200 dark:border-zinc-800 ml-3 space-y-8 pl-8 py-2">
+                        <template x-for="item in activityFeed" :key="item.id">
+                            <div class="relative group">
+                                <div class="absolute -left-[41px] top-1 w-5 h-5 rounded-full border-4 border-white dark:border-zinc-900"
+                                     :class="item.type === 'task' ? (item.completed ? 'bg-green-500' : 'bg-blue-500') : (item.expenseType === 'income' ? 'bg-emerald-500' : 'bg-rose-500')"></div>
+                                <div class="flex items-start justify-between gap-4 p-4 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 hover:bg-white dark:hover:bg-white/10 transition-all shadow-sm hover:shadow-md">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-semibold text-slate-800 dark:text-zinc-100 truncate" x-text="item.text"></p>
+                                        <p class="text-xs text-slate-500 dark:text-zinc-500 mt-1" x-text="formatDate(item.date)"></p>
+                                    </div>
+                                    <div class="text-right whitespace-nowrap">
+                                         <template x-if="item.type === 'expense'">
+                                            <span class="text-sm font-bold font-mono" 
+                                                  :class="item.expenseType === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
+                                                  x-text="(item.expenseType === 'income' ? '+' : '-') + formatCurrency(item.amount)"></span>
+                                        </template>
+                                        <template x-if="item.type === 'task'">
+                                            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border" 
+                                                  :class="item.completed ? 'border-green-200 bg-green-50 text-green-600 dark:border-green-500/20 dark:bg-green-500/10 dark:text-green-400' : 'border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400'"
+                                                  x-text="item.completed ? t('done') : t('doing')"></span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="activityFeed.length === 0" class="text-center py-4 text-slate-500 italic text-sm">
+                            Your journey starts today.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks View -->
+             <div x-show="currentTab === 'tasks'" class="space-y-6" x-transition.opacity>
+                <!-- Navigation Tabs -->
+                <div class="grid grid-cols-2 gap-1 p-1 bg-slate-200 dark:bg-zinc-900/50 rounded-xl border border-slate-300 dark:border-white/10">
+                    <button @click="taskTab = 'list'" 
+                            :class="taskTab === 'list' ? 'bg-white dark:bg-zinc-800 text-indigo-500 shadow-sm dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'" 
+                            class="py-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all" x-text="t('tasks')">
+                        Tasks
+                    </button>
+                    <button @click="taskTab = 'notepad'" 
+                            :class="taskTab === 'notepad' ? 'bg-white dark:bg-zinc-800 text-yellow-500 shadow-sm dark:text-yellow-400' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'" 
+                            class="py-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all" x-text="t('notepad')">
+                        Notes
+                    </button>
+                </div>
+
+                <!-- Task List Section -->
+                <div x-show="taskTab === 'list'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-6">
+                    <!-- Integrated "Log Transaction" Button -->
+                    <button @click="showAddTask = !showAddTask" 
+                            class="w-full py-4 rounded-3xl border-2 border-dashed border-slate-300 dark:border-zinc-700 text-slate-400 dark:text-zinc-400 hover:text-indigo-500 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/5 transition-all flex items-center justify-center gap-2 font-bold group mb-2">
+                        <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-500 dark:text-zinc-500 group-hover:bg-indigo-500 group-hover:text-white flex items-center justify-center transition-colors">
+                            <i class="fa-solid fa-plus transition-transform duration-300" :class="showAddTask ? 'rotate-45' : 'group-hover:rotate-90'"></i>
+                        </div>
+                        <span x-text="showAddTask ? 'Close Form' : t('create_new_task')"></span>
+                    </button>
+
+                    <!-- Add Transaction Form (Collapsible) -->
+                    <div x-show="showAddTask" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 -translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" class="glass-card p-6 rounded-3xl border-l-4 border-l-indigo-500 hover-lift bg-gradient-to-r from-indigo-50/50 to-white dark:from-indigo-500/5 dark:to-transparent">
+                        <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-6" x-text="t('create_new_task')">Add Tasks</h2>
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <div class="flex-1 relative">
+                                <input type="text" x-model="newTaskInput" @keydown.enter="addTask" :placeholder="t('what_next')"
+                                       class="glass-input w-full rounded-2xl px-5 py-4 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all pr-24 placeholder-slate-400 dark:placeholder-zinc-400">
+                                <div class="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
+                                    <button @click="suggestTaskDetails" title="AI Auto-fill" 
+                                            :class="!isOnline ? 'opacity-30 cursor-not-allowed' : 'hover:bg-amber-100 dark:hover:bg-amber-500/20'"
+                                            class="p-2 rounded-xl text-amber-500 transition-colors">
+                                        <i class="fa-solid fa-lightbulb" :class="aiLoading ? 'animate-pulse' : ''"></i>
+                                    </button>
+                                    <button @click="polishTask" title="AI Polish" 
+                                            :class="!isOnline ? 'opacity-30 cursor-not-allowed' : 'hover:bg-indigo-100 dark:hover:bg-indigo-500/20'"
+                                            class="p-2 rounded-xl text-indigo-500 transition-colors">
+                                        <i class="fa-solid fa-wand-magic-sparkles" :class="aiLoading ? 'animate-pulse' : ''"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-3 w-full md:w-auto">
+                                <!-- Recurring Select -->
+                                <select x-model="newTaskRepeat" class="glass-input rounded-2xl px-4 py-3 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none cursor-pointer">
+                                    <option value="None">Once</option>
+                                    <option value="Daily">Daily</option>
+                                    <option value="Weekly">Weekly</option>
+                                </select>
+
+                                <!-- Priority Selector -->
+                                <select x-model="newTaskPriority" 
+                                        class="glass-input rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none cursor-pointer font-bold"
+                                        :class="{
+                                            'text-red-500': newTaskPriority === 'High',
+                                            'text-orange-500': newTaskPriority === 'Medium',
+                                            'text-blue-500': newTaskPriority === 'Low',
+                                            'text-slate-500 dark:text-zinc-500': !newTaskPriority
+                                        }">
+                                    <option value="High" class="text-slate-900 dark:text-white">High</option>
+                                    <option value="Medium" class="text-slate-900 dark:text-white">Medium</option>
+                                    <option value="Low" class="text-slate-900 dark:text-white">Low</option>
+                                </select>
+
+                                <!-- Flatpickr Integrated Input -->
+                                <div class="relative">
+                                    <input x-ref="taskDatetimePicker" placeholder="Due Date"
+                                           class="glass-input rounded-2xl px-4 py-4 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 w-36 text-center cursor-pointer font-mono">
+                                </div>
+                                
+                                <button @click="addTask" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/30 active:scale-95 flex items-center justify-center">
+                                    <i class="fa-solid fa-plus md:hidden"></i>
+                                    <span class="hidden md:inline" x-text="t('add_task')">Add Task</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search & Filters -->
+                    <div class="flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-100/50 dark:bg-white/5 p-2 rounded-2xl border border-slate-200/50 dark:border-white/5">
+                        <div class="relative w-full md:w-72">
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" x-model="taskSearchQuery" :placeholder="t('filter_tasks')"
+                                   class="w-full bg-transparent border-none rounded-xl pl-10 pr-4 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 placeholder-slate-500">
+                        </div>
+                        <div class="flex gap-2 items-center w-full md:w-auto overflow-x-auto pb-1 md:pb-0 no-scrollbar justify-end">
+                            <button x-show="isGcalConnected" @click="syncToCalendar" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors" x-text="t('sync_gcal')">Sync GCal</button>
+                            <button @click="toggleSortMode" class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors" :class="sortMode === 'smart' ? 'bg-indigo-500 text-white' : 'text-slate-500 hover:bg-slate-200 dark:text-zinc-500 dark:hover:bg-zinc-700'" title="Toggle Sort"><i class="fa-solid" :class="sortMode === 'smart' ? 'fa-wand-magic-sparkles' : 'fa-list'"></i></button>
+                            <div class="h-4 w-px bg-slate-300 dark:bg-zinc-700 mx-2"></div>
+                            <template x-for="filter in ['all', 'pending', 'completed']">
+                                <button @click="taskFilter = filter" class="px-4 py-1.5 rounded-xl text-xs font-bold capitalize transition-all" :class="taskFilter === filter ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'"><span x-text="t(filter)"></span></button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Task List -->
+                    <div class="space-y-4 relative" id="taskList">
+                        <template x-for="task in filteredTasks" :key="task.id">
+                            <div class="relative overflow-hidden rounded-2xl group/item select-none" x-data="{ startX: 0, currentX: 0 }" @touchstart="startX = $event.touches[0].clientX" @touchmove="currentX = Math.max(0, $event.touches[0].clientX - startX)" @touchend="if(currentX > 150) { deleteTask(task.id); } currentX = 0;" style="touch-action: pan-y"> 
+                                <div class="absolute inset-0 bg-red-500 flex items-center justify-start pl-8 rounded-2xl transition-opacity duration-200" :style="{ opacity: currentX > 10 ? 1 : 0 }"><i class="fa-solid fa-trash text-white text-xl"></i></div>
+                                <div class="glass-card p-5 rounded-2xl flex items-center gap-5 group transition-transform duration-100 ease-linear border-l-[6px] relative bg-white/80 dark:bg-zinc-900/60" :data-id="task.id" :style="`transform: translateX(${currentX}px)`" :class="{'border-l-red-500': task.priority === 'High' && !isOverdue(task), 'border-l-orange-500': task.priority === 'Medium' && !isOverdue(task), 'border-l-blue-500': task.priority === 'Low' && !isOverdue(task), 'border-l-red-600 shadow-red-500/10': isOverdue(task), 'opacity-60 grayscale': task.completed, 'bg-red-50/50 dark:bg-red-900/10': isOverdue(task), 'cursor-grab active:cursor-grabbing': sortMode === 'manual'}">
+                                    <div x-show="sortMode === 'manual'" class="text-slate-300 dark:text-zinc-600 cursor-grab hover:text-slate-500"><i class="fa-solid fa-grip-vertical"></i></div>
+                                    <button @click="toggleTask(task.id)" class="w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all duration-300 shrink-0" :class="task.completed ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 dark:border-zinc-600 hover:border-indigo-500'"><i x-show="task.completed" class="fa-solid fa-check text-[10px]"></i></button>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1.5">
+                                            <span class="text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded-md" :class="{'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400': task.priority === 'High', 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400': task.priority === 'Medium', 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400': task.priority === 'Low'}" x-text="task.priority || 'Medium'"></span>
+                                            <span x-show="isOverdue(task)" class="text-[9px] font-bold uppercase bg-red-600 text-white px-1.5 py-0.5 rounded-md animate-pulse" x-text="t('late')">Late</span>
+                                            <span x-show="task.repeat && task.repeat !== 'None'" class="text-indigo-400 text-xs" :title="'Repeats ' + task.repeat"><i class="fa-solid fa-rotate"></i></span>
+                                        </div>
+                                        <p class="text-slate-900 dark:text-white font-semibold text-base truncate transition-all decoration-2" :class="task.completed ? 'line-through text-slate-400 dark:text-zinc-500' : ''" x-text="task.text"></p>
+                                        <div class="flex items-center gap-4 mt-2">
+                                            <span x-show="task.dueDate" class="text-xs font-mono flex items-center gap-1.5" :class="isOverdue(task) ? 'text-red-500 font-bold' : 'text-slate-500 dark:text-zinc-400'"><i class="fa-regular fa-clock"></i> <span x-text="task.dueDate"></span><span x-show="task.dueTime" x-text="task.dueTime" class="opacity-75"></span></span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button @click="openEditTask(task)" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"><i class="fa-solid fa-pen text-xs"></i></button>
+                                        <button @click="deleteTask(task.id)" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"><i class="fa-solid fa-trash text-xs"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="filteredTasks.length === 0" class="text-center py-20 flex flex-col items-center justify-center opacity-50">
+                            <div class="w-20 h-20 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4"><i class="fa-solid fa-clipboard-check text-3xl text-slate-300 dark:text-zinc-600"></i></div>
+                            <p class="text-slate-500 font-medium" x-text="t('all_caught_up')">All caught up!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes (Compact) -->
+                <div x-show="taskTab === 'notepad'" class="space-y-6" x-transition:enter="transition ease-out duration-300">
+                    <div x-data="{ expanded: false, showColors: false, title: '', content: '', type: 'text', items: [], newCheckItem: '', selectedColor: 'note-bg-default' }" 
+                         class="rounded-2xl shadow-lg transition-all duration-300 border border-slate-200 dark:border-white/10 overflow-hidden relative"
+                         :class="[expanded ? 'p-4' : 'p-0', expanded ? selectedColor : 'glass-card']"
+                         @click.away="if(expanded && (title || content || items.length)) { addNoteFromInput(title, content, type, items, selectedColor); title=''; content=''; items=[]; type='text'; expanded=false; showColors=false; } else { expanded = false; showColors=false; }">
+                        <div x-show="!expanded" @click="expanded = true" class="p-4 text-slate-500 font-medium cursor-text flex justify-between items-center">
+                            <span>Take a note...</span>
+                            <div class="flex gap-3 text-lg">
+                                <button class="hover:text-slate-800 dark:hover:text-zinc-300"><i class="fa-regular fa-square-check"></i></button>
+                                <button class="hover:text-slate-800 dark:hover:text-zinc-300"><i class="fa-regular fa-image"></i></button>
+                            </div>
+                        </div>
+                        <div x-show="expanded" class="space-y-3">
+                            <input type="text" x-model="title" placeholder="Title" class="w-full bg-transparent text-slate-900 dark:text-white font-bold text-lg focus:outline-none placeholder-slate-500 dark:placeholder-zinc-500">
+                            <textarea x-show="type === 'text'" x-model="content" placeholder="Take a note..." rows="3" class="w-full bg-transparent text-slate-800 dark:text-zinc-200 text-sm resize-none focus:outline-none placeholder-slate-500 dark:placeholder-zinc-500"></textarea>
+                            <div x-show="type === 'checklist'" class="space-y-2">
+                                <template x-for="(item, idx) in items" :key="idx">
+                                    <div class="flex items-center gap-2 text-sm text-slate-800 dark:text-zinc-200">
+                                        <i class="fa-regular" :class="item.checked ? 'fa-square-check text-slate-400' : 'fa-square'"></i>
+                                        <span x-text="item.text" :class="item.checked ? 'line-through text-slate-400' : ''"></span>
+                                        <button @click="items.splice(idx, 1)" class="ml-auto text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
+                                </template>
+                                <div class="flex items-center gap-2 border-t border-slate-200 dark:border-white/10 pt-2">
+                                    <i class="fa-solid fa-plus text-slate-400"></i>
+                                    <input type="text" x-model="newCheckItem" @keydown.enter="if(newCheckItem.trim()){ items.push({text: newCheckItem, checked: false}); newCheckItem=''; }" placeholder="List item" class="bg-transparent focus:outline-none text-sm w-full">
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-white/10">
+                                <div class="flex gap-2 relative">
+                                    <button @click="type = 'text'" :class="type === 'text' ? 'text-slate-900 dark:text-white' : 'text-slate-400'" class="p-2 hover:bg-black/10 rounded-full"><i class="fa-solid fa-font"></i></button>
+                                    <button @click="type = 'checklist'" :class="type === 'checklist' ? 'text-slate-900 dark:text-white' : 'text-slate-400'" class="p-2 hover:bg-black/10 rounded-full"><i class="fa-solid fa-list-check"></i></button>
+                                    <button @click="showColors = !showColors" class="p-2 hover:bg-black/10 rounded-full transition-colors text-slate-400 hover:text-slate-900 dark:hover:text-white"><i class="fa-solid fa-palette"></i></button>
+                                    
+                                    <!-- Color Palette Popover -->
+                                    <div x-show="showColors" class="absolute bottom-10 left-0 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/10 p-2 rounded-xl flex gap-1 shadow-xl z-50 flex-wrap w-48 transition-all" 
+                                         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+                                        <template x-for="c in noteColors" :key="c.id">
+                                            <button @click="selectedColor = c.id; showColors = false" class="w-6 h-6 rounded-full border border-black/10 dark:border-white/20 hover:scale-125 transition-transform shadow-sm" :style="'background-color: ' + c.color"></button>
+                                        </template>
+                                    </div>
+                                </div>
+                                <button @click="addNoteFromInput(title, content, type, items, selectedColor); title=''; content=''; items=[]; type='text'; expanded=false; showColors=false;" class="text-sm font-bold text-slate-900 dark:text-white hover:bg-black/10 px-4 py-2 rounded-lg">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <template x-for="note in filteredNotes" :key="note.id">
+                            <div class="rounded-2xl p-5 relative group transition-all duration-300 hover:-translate-y-1 border border-transparent hover:shadow-lg flex flex-col" :class="[note.color, note.pinned ? 'border-yellow-500/50' : 'border-black/5 dark:border-white/5']" x-data="{ showColors: false }">
+                                <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 z-20">
+                                    <button @click="togglePinNote(note.id)" class="w-8 h-8 rounded-full bg-black/10 dark:bg-black/20 hover:bg-black/20 dark:hover:bg-black/30 flex items-center justify-center text-slate-800 dark:text-white" :class="note.pinned ? 'text-yellow-500 dark:text-yellow-400 opacity-100' : ''"><i class="fa-solid fa-thumbtack text-xs"></i></button>
+                                    
+                                    <!-- Edit Color -->
+                                    <div class="relative">
+                                        <button @click="showColors = !showColors" class="w-8 h-8 rounded-full bg-black/10 dark:bg-black/20 hover:bg-black/20 dark:hover:bg-black/30 flex items-center justify-center text-slate-800 dark:text-white"><i class="fa-solid fa-palette text-xs"></i></button>
+                                        <div x-show="showColors" @click.away="showColors = false" class="absolute top-9 right-0 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/10 p-2 rounded-xl flex gap-1 shadow-xl z-50 flex-wrap w-40"
+                                             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+                                            <template x-for="c in noteColors" :key="c.id">
+                                                <button @click="updateNoteColor(note.id, c.id); showColors = false" class="w-6 h-6 rounded-full border border-black/10 dark:border-white/20 hover:scale-125 transition-transform" :style="'background-color: ' + c.color"></button>
+                                            </template>
+                                        </div>
+                                    </div>
+
+                                    <button @click="archiveNote(note.id)" class="w-8 h-8 rounded-full bg-black/10 dark:bg-black/20 hover:bg-black/20 dark:hover:bg-black/30 flex items-center justify-center text-slate-800 dark:text-white"><i class="fa-solid fa-box-archive text-xs"></i></button>
+                                </div>
+                                <input type="text" x-model="note.title" @change="saveNoteData()" placeholder="Title" class="bg-transparent font-bold text-lg mb-2 focus:outline-none w-[85%] text-slate-900 dark:text-white placeholder-slate-500/50">
+                                <div class="flex-1 mb-4">
+                                    <template x-if="note.type === 'text'"><textarea x-model="note.content" @change="saveNoteData()" class="w-full bg-transparent text-sm resize-none focus:outline-none text-slate-800 dark:text-zinc-200" rows="4"></textarea></template>
+                                    <template x-if="note.type === 'checklist'">
+                                        <div class="space-y-1.5">
+                                            <template x-for="(item, i) in note.items" :key="i">
+                                                <div class="flex items-start gap-2 text-sm text-slate-800 dark:text-zinc-200 cursor-pointer" @click="item.checked = !item.checked; saveNoteData()">
+                                                    <i class="fa-regular mt-1" :class="item.checked ? 'fa-square-check text-slate-500' : 'fa-square'"></i>
+                                                    <span x-text="item.text" :class="item.checked ? 'line-through text-slate-500' : ''" class="flex-1 break-all"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wallet View (FIXED UI) -->
+            <div x-show="currentTab === 'wallet'" class="space-y-6" x-transition.opacity>
+                <!-- Wallet Tabs -->
+                <div class="grid grid-cols-3 gap-1 p-1 bg-slate-200 dark:bg-zinc-900/50 rounded-xl border border-slate-300 dark:border-white/10">
+                    <button @click="walletTab = 'expense'" :class="walletTab === 'expense' ? 'bg-white dark:bg-zinc-800 text-rose-500 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'" class="py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all" x-text="t('expense')">Expense</button>
+                    <button @click="walletTab = 'income'" :class="walletTab === 'income' ? 'bg-white dark:bg-zinc-800 text-emerald-500 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'" class="py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all" x-text="t('income')">Income</button>
+                    <button @click="walletTab = 'udhaar'" :class="walletTab === 'udhaar' ? 'bg-white dark:bg-zinc-800 text-amber-500 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'" class="py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all" x-text="t('udhaar')">Udhaar</button>
+                </div>
+
+                <!-- Expense/Income View -->
+                <div x-show="walletTab !== 'udhaar'" class="space-y-6">
+                    <!-- Added overflow-visible to ensure dropdown isn't clipped -->
+                    <div class="glass-card p-6 rounded-3xl border-t-4 hover-lift overflow-visible relative z-40" :class="walletTab === 'expense' ? 'border-rose-500' : 'border-emerald-500'">
+                        <!-- Magic Paste -->
+                        <div class="mb-6 relative">
+                             <i class="fa-solid fa-wand-magic-sparkles absolute left-4 top-1/2 -translate-y-1/2 text-amber-500 text-xs"></i>
+                             <input type="text" x-model="smsInput" @change="parseMagicSMS" :placeholder="t('magic_paste')" class="glass-input w-full rounded-xl pl-10 pr-4 py-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500/50 placeholder-slate-500 dark:placeholder-zinc-500">
+                        </div>
+
+                        <!-- Amount & Desc Row -->
+                        <div class="flex flex-col md:flex-row gap-4 mb-4">
+                            <div class="relative w-full md:w-1/3">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-500 font-bold" x-text="getCurrencySymbol()"></span>
+                                <input type="number" x-model="newExpenseAmount" placeholder="0.00" class="glass-input w-full rounded-xl pl-10 pr-4 py-4 text-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+                            </div>
+                            <div class="relative flex-1">
+                                <input type="text" x-model="newExpenseDesc" :placeholder="t('what_for')" class="glass-input w-full h-full rounded-xl px-4 py-4 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+                            </div>
+                        </div>
+
+                        <!-- Controls Row -->
+                        <div class="flex gap-3 mb-6 relative z-30">
+                             <button @click="startVoiceInput" class="px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors" 
+                                     :class="recording ? 'bg-red-500 text-white animate-pulse' : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-500/20'">
+                                <i class="fa-solid" :class="recording ? 'fa-stop' : 'fa-microphone'"></i> 
+                                <span x-text="recording ? 'Stop' : 'Voice'"></span>
+                             </button>
+                             <button @click="startScanInput" class="px-4 py-2 rounded-xl bg-pink-50 text-pink-600 dark:bg-pink-500/10 dark:text-pink-500 hover:bg-pink-100 dark:hover:bg-pink-500/20 text-xs font-bold flex items-center gap-2 transition-colors"><i class="fa-solid fa-camera"></i> Scan</button>
+                             
+                             <!-- Custom Category Selector (Popup) -->
+                             <div class="flex-1 relative" x-data="{ open: false }">
+                                <button @click="open = !open" @click.outside="open = false" 
+                                        class="w-full h-full glass-input rounded-xl px-4 py-2 text-xs text-left flex justify-between items-center text-slate-900 dark:text-white transition-all hover:bg-black/5 dark:hover:bg-white/5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" 
+                                              :class="walletTab === 'expense' ? 'bg-rose-100 text-rose-500 dark:bg-rose-500/20' : 'bg-emerald-100 text-emerald-500 dark:bg-emerald-500/20'">
+                                            <span x-text="getCategoryIcon(newExpenseCategory)"></span>
+                                        </span>
+                                        <span class="font-bold" x-text="newExpenseCategory"></span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                                </button>
+                                
+                                <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                     class="absolute top-full right-0 w-48 mt-2 glass-card rounded-xl overflow-hidden z-50 max-h-56 overflow-y-auto border border-slate-200 dark:border-white/10 shadow-xl custom-scrollbar"
+                                     style="z-index: 50;">
+                                    <div class="p-1 bg-white dark:bg-zinc-800">
+                                        <div class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase px-3 py-1 mb-1">Select Category</div>
+                                        <template x-for="cat in (walletTab === 'expense' ? categories : incomeCategories)" :key="cat">
+                                            <button @click="newExpenseCategory = cat; open = false" 
+                                                    class="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors flex items-center gap-3 mb-1"
+                                                    :class="newExpenseCategory === cat ? 'bg-slate-100 dark:bg-white/10' : ''">
+                                                <span class="w-6 h-6 rounded-lg flex items-center justify-center text-xs" 
+                                                      :class="walletTab === 'expense' ? 'bg-rose-50 text-rose-500 dark:bg-rose-500/10' : 'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10'">
+                                                    <span x-text="getCategoryIcon(cat)"></span>
+                                                </span>
+                                                <span class="font-medium text-slate-700 dark:text-zinc-200" x-text="cat"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+
+                        <button @click="addTransaction" class="w-full py-4 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"
+                                :class="walletTab === 'expense' ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/30' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30'">
+                            <span x-text="walletTab === 'expense' ? t('add_expense') : t('add_income')"></span>
+                        </button>
+                    </div>
+
+                    <!-- Savings Goals & AI Advisor Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Savings Goals -->
+                        <div class="glass-card p-6 rounded-3xl relative">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-slate-900 dark:text-white">Savings Goals</h3>
+                                <button @click="showGoalModal = true" class="px-3 py-1 bg-slate-100 dark:bg-white/10 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-white/20 transition-colors">+ New</button>
+                            </div>
+                            <div class="space-y-4">
+                                <template x-for="(goal, idx) in savingsGoals" :key="idx">
+                                    <div>
+                                        <div class="flex justify-between text-xs mb-1">
+                                            <span class="text-slate-400" x-text="goal.name"></span>
+                                            <span class="text-slate-900 dark:text-white font-bold" x-text="formatCurrency(goal.current) + ' / ' + formatCurrency(goal.target)"></span>
+                                        </div>
+                                        <div class="w-full bg-slate-100 dark:bg-white/5 rounded-full h-2 overflow-hidden cursor-pointer" @click="selectedGoal = goal; showFundsModal = true">
+                                            <div class="bg-indigo-500 h-full rounded-full transition-all duration-500" :style="'width: ' + Math.min(100, (goal.current / goal.target) * 100) + '%'"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div x-show="savingsGoals.length === 0" class="text-xs text-slate-500 italic">No goals yet.</div>
+                            </div>
+                        </div>
+
+                        <!-- AI Advisor Mini -->
+                        <div class="glass-card p-6 rounded-3xl flex flex-col items-center justify-center text-center">
+                            <div class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-500 mb-3">
+                                <i class="fa-solid fa-robot text-xl"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-900 dark:text-white">AI Financial Advisor</h3>
+                            <p class="text-xs text-slate-500 dark:text-zinc-500 mt-1 mb-4">Get personalized spending advice.</p>
+                            <button @click="generateFinancialAnalysis; currentTab = 'analytics'" class="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-bold transition-colors">
+                                Analyze My Finances
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Recent History -->
+                    <div class="glass-card p-6 rounded-3xl">
+                         <h3 class="text-xs font-bold uppercase text-slate-500 dark:text-zinc-500 mb-4" x-text="t('history')">History</h3>
+                         <div class="space-y-3">
+                            <template x-for="item in expenses.filter(e => (!e.type && walletTab === 'expense') || e.type === walletTab).slice().reverse().slice(0, 5)" :key="item.id">
+                                <div class="flex items-center justify-between group">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs" 
+                                             :class="walletTab === 'expense' ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:text-rose-500' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-500'">
+                                            <span x-text="getCategoryIcon(item.category)"></span>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-slate-900 dark:text-white text-sm" x-text="item.desc"></p>
+                                            <p class="text-[10px] text-slate-500" x-text="formatDate(item.date)"></p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-mono font-bold" :class="walletTab === 'expense' ? 'text-rose-500' : 'text-emerald-500'" x-text="formatCurrency(item.amount)"></p>
+                                        <button @click="deleteExpense(item.id)" class="text-[10px] text-red-500 opacity-0 group-hover:opacity-100">Delete</button>
+                                    </div>
+                                </div>
+                            </template>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- Udhaar View -->
+                <div x-show="walletTab === 'udhaar'" class="space-y-6">
+                    <!-- Net Balance Card -->
+                    <div class="glass-card p-8 rounded-3xl bg-white dark:bg-zinc-900 text-center border border-slate-200 dark:border-white/5 relative overflow-hidden">
+                         <div class="relative z-10">
+                            <p class="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-2" x-text="t('net_balance')">NET BALANCE</p>
+                            <h2 class="text-5xl font-bold mb-4" :class="netUdhaar >= 0 ? 'text-emerald-500' : 'text-rose-500'" x-text="formatCurrency(Math.abs(netUdhaar))"></h2>
+                            <div class="inline-block px-4 py-1.5 rounded-full text-xs font-bold" 
+                                 :class="netUdhaar >= 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'">
+                                <span x-text="netUdhaar >= 0 ? t('you_receive') : t('you_pay')"></span>
+                            </div>
+                         </div>
+                    </div>
+
+                    <!-- Add Udhaar Form -->
+                    <div class="glass-card p-6 rounded-3xl border border-slate-200 dark:border-white/10">
+                        <div class="flex p-1 bg-slate-100 dark:bg-zinc-800 rounded-xl mb-6 relative">
+                             <div class="absolute inset-y-1 w-1/2 bg-white dark:bg-zinc-700 rounded-lg shadow transition-all duration-300" 
+                                  :class="udhaarForm.type === 'given' ? 'left-1' : 'left-1/2 -ml-1'"></div>
+                             <button @click="udhaarForm.type = 'given'" class="relative z-10 flex-1 py-2 text-sm font-bold transition-colors flex items-center justify-center gap-2" :class="udhaarForm.type === 'given' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-500 dark:text-zinc-400'">
+                                <i class="fa-solid fa-arrow-up"></i> <span x-text="t('gave')">Gave</span>
+                             </button>
+                             <button @click="udhaarForm.type = 'taken'" class="relative z-10 flex-1 py-2 text-sm font-bold transition-colors flex items-center justify-center gap-2" :class="udhaarForm.type === 'taken' ? 'text-rose-500 dark:text-rose-400' : 'text-slate-500 dark:text-zinc-400'">
+                                <i class="fa-solid fa-arrow-down"></i> <span x-text="t('took')">Took</span>
+                             </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="relative">
+                                <input type="text" x-model="udhaarForm.person" :placeholder="t('person_name')" class="glass-input w-full rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" x-text="getCurrencySymbol()"></span>
+                                <input type="number" x-model="udhaarForm.amount" :placeholder="t('amount')" class="glass-input w-full rounded-xl pl-8 pr-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <button @click="addUdhaar" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition-all" x-text="t('save')">
+                                Save
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- List -->
+                    <div class="space-y-3">
+                        <template x-for="(item, index) in udhaarItems" :key="index">
+                            <div class="glass-card p-4 rounded-xl flex items-center justify-between group border-l-4" :class="item.type === 'given' ? 'border-emerald-500' : 'border-rose-500'">
+                                <div>
+                                    <p class="font-bold text-slate-900 dark:text-white text-sm" x-text="item.person"></p>
+                                    <p class="text-[10px] text-slate-500" x-text="formatDate(item.date)"></p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-mono font-bold" :class="item.type === 'given' ? 'text-emerald-500' : 'text-rose-500'" x-text="formatCurrency(item.amount)"></p>
+                                    <button @click="settleUdhaar(index)" class="text-[10px] text-slate-400 hover:text-indigo-500 transition-colors mt-1" x-text="t('settle')">Settle</button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics View (Updated) -->
+            <div x-show="currentTab === 'analytics'" class="space-y-6" x-transition.opacity>
+                <!-- AI Advisor -->
+                <div class="glass-card p-6 rounded-3xl bg-gradient-to-br from-indigo-600 to-purple-700 text-white relative overflow-hidden group">
+                     <div class="relative z-10">
+                         <div class="flex items-start justify-between mb-4">
+                             <div><h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-robot"></i> <span x-text="t('ai_advisor')">AI Financial Advisor</span></h2><p class="text-indigo-100 text-xs mt-1" x-text="t('get_advice')">Get personalized spending advice.</p></div>
+                             <button @click="generateFinancialAnalysis" :disabled="aiAnalyticsLoading" class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"><i class="fa-solid fa-wand-magic-sparkles" :class="aiAnalyticsLoading ? 'animate-pulse' : ''"></i></button>
+                         </div>
+                         <div x-show="!aiAnalyticsResult" class="text-sm text-indigo-100/80 italic border-l-2 border-white/20 pl-3 py-1">Tap the magic wand to analyze your spending habits.</div>
+                         <div x-show="aiAnalyticsResult" x-transition class="mt-4 p-4 bg-black/20 rounded-xl text-sm leading-relaxed max-h-60 overflow-y-auto custom-scrollbar" x-html="aiAnalyticsResult"></div>
+                     </div>
+                </div>
+                
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="glass-card p-4 rounded-2xl border-t-4 border-emerald-500">
+                        <p class="text-[10px] uppercase font-bold text-slate-500 dark:text-zinc-500 mb-1" x-text="t('income')">Income</p>
+                        <p class="text-lg font-bold text-emerald-500 truncate" x-text="formatCurrency(analyticsTotalIncome)"></p>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl border-t-4 border-rose-500">
+                        <p class="text-[10px] uppercase font-bold text-slate-500 dark:text-zinc-500 mb-1" x-text="t('expense')">Expense</p>
+                        <p class="text-lg font-bold text-rose-500 truncate" x-text="formatCurrency(analyticsTotalExpense)"></p>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl border-t-4 border-blue-500">
+                        <p class="text-[10px] uppercase font-bold text-slate-500 dark:text-zinc-500 mb-1">Savings Rate</p>
+                        <p class="text-lg font-bold text-blue-500" x-text="Math.round(analyticsSavingsRate) + '%'"></p>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl border-t-4 border-amber-500">
+                        <p class="text-[10px] uppercase font-bold text-slate-500 dark:text-zinc-500 mb-1">Health Score</p>
+                        <p class="text-lg font-bold text-amber-500" x-text="financialHealthScore + '/100'"></p>
+                    </div>
+                </div>
+
+                <!-- Budget & Productivity Row -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Budget Progress -->
+                    <div class="glass-card p-6 rounded-3xl">
+                        <div class="flex justify-between items-end mb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 dark:text-white">Monthly Budget</h3>
+                                <p class="text-xs text-slate-500 dark:text-zinc-500 mt-1"><span x-text="formatCurrency(analyticsTotalExpense)"></span> of <span x-text="formatCurrency(profile.budget)"></span></p>
+                            </div>
+                            <span class="text-xl font-bold" :class="budgetProgress > 100 ? 'text-red-500' : 'text-indigo-500'" x-text="Math.round(budgetProgress) + '%'"></span>
+                        </div>
+                        <div class="w-full bg-slate-100 dark:bg-white/5 rounded-full h-4 overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden" 
+                                 :class="budgetProgress > 100 ? 'bg-red-500' : 'bg-gradient-to-r from-indigo-500 to-purple-500'" 
+                                 :style="'width: ' + Math.min(100, budgetProgress) + '%'">
+                                 <div class="absolute inset-0 bg-white/20 animate-[pulse_2s_infinite]"></div>
+                            </div>
+                        </div>
+                        <p x-show="budgetProgress > 100" class="text-[10px] text-red-500 font-bold mt-2 text-right"><i class="fa-solid fa-triangle-exclamation"></i> Over Budget</p>
+                    </div>
+
+                    <!-- Productivity Score -->
+                    <div class="glass-card p-6 rounded-3xl">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-900 dark:text-white">Productivity</h3>
+                            <span class="px-2 py-1 rounded-lg bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-bold" x-text="productivityScore + '%'"></span>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="flex-1 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 text-center">
+                                <span class="block text-2xl font-bold text-slate-800 dark:text-white" x-text="tasks.filter(t => t.completed).length"></span>
+                                <span class="text-[10px] uppercase font-bold text-slate-400">Completed</span>
+                            </div>
+                            <div class="flex-1 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 text-center">
+                                <span class="block text-2xl font-bold text-slate-800 dark:text-white" x-text="tasks.filter(t => !t.completed).length"></span>
+                                <span class="text-[10px] uppercase font-bold text-slate-400">Pending</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Charts -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-card p-6 rounded-3xl">
+                        <h3 class="font-bold text-slate-900 dark:text-white mb-4 text-xs uppercase tracking-wider" x-text="t('spending_trend')">Spending Trend</h3>
+                        <div class="relative h-64 w-full">
+                            <canvas id="analyticsBarChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-card p-6 rounded-3xl">
+                        <h3 class="font-bold text-slate-900 dark:text-white mb-4 text-xs uppercase tracking-wider" x-text="t('category_distribution')">Distribution</h3>
+                        <div class="relative h-64 w-full flex items-center justify-center">
+                            <canvas id="analyticsPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Expenses List -->
+                <div class="glass-card p-6 rounded-3xl">
+                    <h3 class="font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-trend-up text-rose-500"></i> Top Expenses
+                    </h3>
+                    <div class="space-y-4">
+                        <template x-for="(item, idx) in topExpenses" :key="item.id">
+                            <div class="flex items-center justify-between group">
+                                <div class="flex items-center gap-4">
+                                    <div class="text-sm font-bold text-slate-300 w-4" x-text="'#' + (idx + 1)"></div>
+                                    <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-lg">
+                                        <span x-text="getCategoryIcon(item.category)"></span>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-slate-900 dark:text-white text-sm" x-text="item.desc"></p>
+                                        <p class="text-[10px] text-slate-500 uppercase tracking-wider" x-text="item.category"></p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-mono font-bold text-rose-500" x-text="formatCurrency(item.amount)"></p>
+                                    <p class="text-[10px] text-slate-500" x-text="formatDate(item.date)"></p>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="topExpenses.length === 0" class="text-center text-slate-500 text-xs py-4">No expenses recorded yet.</div>
+                    </div>
+                </div>
+            </div>
+            
+             <!-- Settings View (Restored) -->
+            <div x-show="currentTab === 'settings'" class="space-y-6" x-transition.opacity>
+                <!-- Cloud Sync Card (Preserved) -->
+                <div class="glass-card p-8 rounded-3xl hover-lift border-t-4 border-emerald-500" x-data="{ authTab: 'login' }">
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500"><i class="fa-solid fa-cloud"></i></div>
+                        <span x-text="t('cloud_sync')">Cloud Sync</span>
+                    </h2>
+                    <div x-show="!currentUser" class="max-w-md mx-auto">
+                        <div class="flex p-1 bg-slate-100 dark:bg-zinc-800 rounded-xl mb-6 relative">
+                             <div class="absolute inset-y-1 w-1/2 bg-white dark:bg-zinc-700 rounded-lg shadow transition-all duration-300" 
+                                  :class="authTab === 'login' ? 'left-1' : 'left-1/2 -ml-1'"></div>
+                             <button @click="authTab = 'login'" class="relative z-10 flex-1 py-2 text-sm font-bold transition-colors" :class="authTab === 'login' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-zinc-500'">Login</button>
+                             <button @click="authTab = 'register'" class="relative z-10 flex-1 py-2 text-sm font-bold transition-colors" :class="authTab === 'register' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-zinc-500'">Sign Up</button>
+                        </div>
+                        <div class="space-y-4">
+                             <input type="email" x-model="authForm.email" placeholder="Email" class="glass-input w-full rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+                             <input type="password" x-model="authForm.password" placeholder="Password" class="glass-input w-full rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
+                             
+                             <div x-show="authTab === 'login'" class="flex justify-end">
+                                <button @click="openForgotModal" class="text-xs text-emerald-500 hover:underline">Forgot Password?</button>
+                             </div>
+
+                             <button x-show="authTab === 'login'" @click="authLogin" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-emerald-600/20"><span x-text="t('login_sync')"></span></button>
+                             <button x-show="authTab === 'register'" @click="authRegister" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-emerald-600/20"><span x-text="t('create_account')"></span></button>
+                        
+                             <!-- Social Login -->
+                             <div class="mt-4">
+                                <div class="relative">
+                                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200 dark:border-white/10"></div></div>
+                                    <div class="relative flex justify-center text-sm"><span class="px-2 bg-white dark:bg-[#18181b] text-slate-500" x-text="t('or_continue')">Or continue with</span></div>
+                                </div>
+                                <div class="mt-4 grid grid-cols-2 gap-3">
+                                    <button class="flex items-center justify-center py-2.5 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors bg-white dark:bg-transparent">
+                                        <i class="fa-brands fa-google text-red-500 mr-2"></i> <span class="font-bold text-xs text-slate-700 dark:text-zinc-300">Google</span>
+                                    </button>
+                                    <button class="flex items-center justify-center py-2.5 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors bg-white dark:bg-transparent">
+                                        <i class="fa-brands fa-facebook text-blue-600 mr-2"></i> <span class="font-bold text-xs text-slate-700 dark:text-zinc-300">Facebook</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div x-show="currentUser">
+                         <div class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-6 p-4 bg-emerald-50 dark:bg-emerald-500/5 rounded-2xl border border-emerald-200 dark:border-emerald-500/10">
+                            <div class="text-center sm:text-left">
+                                <p class="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-1" x-text="t('logged_in')">Logged in as</p>
+                                <p class="font-bold text-lg text-emerald-600 dark:text-emerald-400" x-text="currentUser ? currentUser.email : ''"></p>
+                            </div>
+                            <button @click="authLogout" class="px-6 py-3 bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-xl text-sm font-bold hover:bg-red-500 hover:text-white transition-colors" x-text="t('logout')">Logout</button>
+                        </div>
+                        <!-- Change Password via Forgot Password Flow since Reset Password is removed -->
+                        <button @click="openForgotModal" class="w-full mt-4 py-3 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 rounded-xl text-sm font-bold hover:bg-slate-50 dark:hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-key"></i> Reset Password
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Personalization Card -->
+                <div class="glass-card p-8 rounded-3xl hover-lift border-t-4 border-indigo-500 overflow-visible relative z-40">
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500"><i class="fa-solid fa-user-gear"></i></div>
+                        <span x-text="t('personalization')">Personalization</span>
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <!-- Avatar Upload -->
+                         <div class="flex items-center gap-4">
+                            <div class="relative w-20 h-20 rounded-full overflow-hidden border-2 border-indigo-500/30 group">
+                                <template x-if="profile.avatar">
+                                    <img :src="profile.avatar" class="w-full h-full object-cover">
+                                </template>
+                                <template x-if="!profile.avatar">
+                                    <div class="w-full h-full bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500"><i class="fa-solid fa-user text-2xl"></i></div>
+                                </template>
+                                <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                    <i class="fa-solid fa-camera text-white"></i>
+                                    <input type="file" @change="uploadAvatar" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold uppercase text-slate-500 dark:text-zinc-500 mb-1">Profile Photo</p>
+                                <p class="text-[10px] text-slate-400 dark:text-zinc-400">Tap to change</p>
+                            </div>
+                         </div>
+                         
+                         <!-- Name -->
+                         <div>
+                            <label class="block text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase mb-2" x-text="t('display_name')">Display Name</label>
+                            <input type="text" x-model="profile.name" @change="saveData" class="glass-input w-full rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+                         </div>
+
+                         <!-- Budget -->
+                         <div>
+                            <label class="block text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase mb-2" x-text="t('budget_goal')">Monthly Budget</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" x-text="getCurrencySymbol()"></span>
+                                <input type="number" x-model="profile.budget" @change="saveData" class="glass-input w-full rounded-xl pl-8 pr-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+                            </div>
+                         </div>
+
+                         <!-- Phone Number (New) -->
+                         <div>
+                            <label class="block text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase mb-2">Phone Number</label>
+                            <div class="relative">
+                                <input type="tel" x-model="profile.phone" @input="profile.phoneVerified = false; settings.whatsAppAlerts = false; saveData()" class="glass-input w-full rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50" placeholder="+91 98765 43210">
+                                <div class="absolute right-4 top-1/2 -translate-y-1/2">
+                                    <span x-show="profile.phoneVerified" class="text-emerald-500 text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> Verified</span>
+                                    <button x-show="!profile.phoneVerified && profile.phone" @click="openVerifyModal()" class="text-amber-500 text-xs font-bold hover:underline">Verify</button>
+                                </div>
+                            </div>
+                        </div>
+
+                         <!-- Custom Currency Selector (Popup) -->
+                         <div>
+                            <label class="block text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase mb-2" x-text="t('currency')">Currency</label>
+                            <div class="relative z-30" x-data="{ open: false }">
+                                <button @click="open = !open" @click.outside="open = false" class="w-full glass-input rounded-xl px-4 py-3 text-sm text-left flex justify-between items-center text-slate-900 dark:text-white transition-all hover:bg-black/5 dark:hover:bg-white/5">
+                                    <span x-text="profile.currency + ' (' + getCurrencySymbol() + ')'"></span>
+                                    <i class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                                </button>
+                                <div x-show="open" x-transition class="absolute top-full left-0 w-full mt-2 glass-card rounded-xl overflow-hidden z-50 max-h-48 overflow-y-auto border border-slate-200 dark:border-white/10 shadow-xl custom-scrollbar"
+                                     style="z-index: 50;">
+                                     <div class="p-1 bg-white dark:bg-zinc-800">
+                                        <template x-for="curr in ['INR', 'USD', 'EUR', 'GBP', 'JPY']">
+                                            <button @click="profile.currency = curr; saveData(); open = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors" :class="profile.currency === curr ? 'bg-slate-100 dark:bg-white/10 font-bold' : ''">
+                                                <span x-text="curr"></span>
+                                            </button>
+                                        </template>
+                                     </div>
+                                </div>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- Notification Settings Card (New) -->
+                <div class="glass-card p-8 rounded-3xl hover-lift border-t-4 border-teal-500 relative z-30">
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-500/10 flex items-center justify-center text-teal-500"><i class="fa-solid fa-bell"></i></div>
+                        <span>Notification Settings</span>
+                    </h2>
+                    
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-zinc-800 text-green-500">
+                                <i class="fa-brands fa-whatsapp text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-900 dark:text-white">WhatsApp Alerts</h3>
+                                <p class="text-[10px] text-slate-500 dark:text-zinc-500">Receive task reminders on WhatsApp</p>
+                            </div>
+                        </div>
+                        
+                        <div class="relative">
+                            <button @click="toggleWhatsApp()" 
+                                    class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none" 
+                                    :class="settings.whatsAppAlerts ? 'bg-green-500' : 'bg-slate-300 dark:bg-zinc-700'">
+                                <span class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform ml-1" 
+                                      :class="settings.whatsAppAlerts ? 'translate-x-5' : 'translate-x-0'"></span>
+                            </button>
+                            <!-- Overlay to capture click if not verified -->
+                            <div x-show="!profile.phoneVerified" class="absolute inset-0 z-10 cursor-pointer" @click="toggleWhatsApp()"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Access Card (RBAC) -->
+                <div x-show="currentUser && currentUser.role === 'admin'" class="glass-card p-8 rounded-3xl hover-lift border-t-4 border-red-500 relative z-25">
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-500/10 flex items-center justify-center text-red-500"><i class="fa-solid fa-lock"></i></div>
+                        <span>Administration</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 dark:text-zinc-400 mb-4">Manage global system settings and security.</p>
+                    <a href="admin.php" target="_blank" class="w-full py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-gauge-high"></i> Open Admin Panel
+                    </a>
+                </div>
+
+                <!-- Interface Card -->
+                <div class="glass-card p-8 rounded-3xl hover-lift border-t-4 border-purple-500 overflow-visible relative z-20">
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/10 flex items-center justify-center text-purple-500"><i class="fa-solid fa-palette"></i></div>
+                        <span x-text="t('interface')">Interface</span>
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase mb-2" x-text="t('text_size')">Text Size</label>
+                            <div class="flex p-1 bg-slate-100 dark:bg-zinc-800 rounded-xl">
+                                <button @click="setFontSize('normal')" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all" :class="fontSize === 'normal' ? 'bg-white dark:bg-zinc-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-500'">Normal</button>
+                                <button @click="setFontSize('large')" class="flex-1 py-2 rounded-lg text-sm font-bold transition-all" :class="fontSize === 'large' ? 'bg-white dark:bg-zinc-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-500'">Large</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Language Selector (Popup) -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase mb-2" x-text="t('language')">Language</label>
+                            <div class="relative z-20" x-data="{ open: false }">
+                                <button @click="open = !open" @click.outside="open = false" class="w-full glass-input rounded-xl px-4 py-3 text-sm text-left flex justify-between items-center text-slate-900 dark:text-white transition-all hover:bg-black/5 dark:hover:bg-white/5">
+                                    <span x-text="language === 'en' ? 'English' : language === 'hi' ? 'Hindi (हिंदी)' : language === 'bn' ? 'Bengali (বাংলা)' : language === 'es' ? 'Spanish (Español)' : 'French (Français)'"></span>
+                                    <i class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                                </button>
+                                <div x-show="open" x-transition class="absolute top-full left-0 w-full mt-2 glass-card rounded-xl overflow-hidden z-50 max-h-48 overflow-y-auto border border-slate-200 dark:border-white/10 shadow-xl custom-scrollbar"
+                                     style="z-index: 50;">
+                                    <div class="p-1 bg-white dark:bg-zinc-800">
+                                        <button @click="changeLanguage('en'); open = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors flex items-center justify-between">English <i x-show="language === 'en'" class="fa-solid fa-check text-xs text-indigo-500"></i></button>
+                                        <button @click="changeLanguage('hi'); open = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors flex items-center justify-between">Hindi (हिंदी) <i x-show="language === 'hi'" class="fa-solid fa-check text-xs text-indigo-500"></i></button>
+                                        <button @click="changeLanguage('bn'); open = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors flex items-center justify-between">Bengali (বাংলা) <i x-show="language === 'bn'" class="fa-solid fa-check text-xs text-indigo-500"></i></button>
+                                        <button @click="changeLanguage('es'); open = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors flex items-center justify-between">Spanish (Español) <i x-show="language === 'es'" class="fa-solid fa-check text-xs text-indigo-500"></i></button>
+                                        <button @click="changeLanguage('fr'); open = false" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors flex items-center justify-between">French (Français) <i x-show="language === 'fr'" class="fa-solid fa-check text-xs text-indigo-500"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Control Card -->
+                <div class="glass-card p-8 rounded-3xl hover-lift border-t-4 border-blue-500 relative z-10">
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center text-blue-500"><i class="fa-solid fa-database"></i></div>
+                        <span x-text="t('data_control')">Data Control</span>
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="flex gap-4">
+                            <button @click="exportData" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl text-xs font-bold text-slate-700 dark:text-zinc-300 transition-colors flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-download"></i> <span x-text="t('export_json')">Export JSON</span>
+                            </button>
+                            <div class="flex-1 relative">
+                                <button class="w-full h-full py-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl text-xs font-bold text-slate-700 dark:text-zinc-300 transition-colors flex items-center justify-center gap-2 pointer-events-none">
+                                    <i class="fa-solid fa-upload"></i> <span x-text="t('import_json')">Import JSON</span>
+                                </button>
+                                <input type="file" @change="importData" accept=".json" class="absolute inset-0 opacity-0 cursor-pointer">
+                            </div>
+                        </div>
+                        
+                        <button @click="generatePDF" class="w-full py-4 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-red-500/20 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-file-pdf"></i> <span x-text="t('life_report')">Download Life Report (PDF)</span>
+                        </button>
+
+                        <button @click="if(confirm('Are you sure? This will wipe all local data.')) hardReset()" class="w-full py-3 border border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-colors">
+                            <i class="fa-solid fa-trash mr-2"></i> <span x-text="t('reset_all')">Reset All Data</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Footer / Version -->
+                <div class="text-center py-8 text-slate-400 dark:text-zinc-600">
+                    <div class="w-8 h-8 mx-auto mb-2 opacity-50 grayscale bg-indigo-500 rounded-lg flex items-center justify-center text-white font-bold text-xs">TK</div>
+                    <p class="text-xs font-bold">TraKr v1.2.0</p>
+                    <p class="text-[10px] mt-1">&copy; 2024 TraKr Inc. All rights reserved.</p>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav md:hidden">
+        <template x-for="item in navItems" :key="item.id">
+            <button @click="currentTab = item.id" 
+                    class="mobile-nav-item" 
+                    :class="currentTab === item.id ? 'active' : ''">
+                <i :class="item.icon" class="text-xl mb-1"></i>
+                <span x-text="t(item.id)"></span>
+            </button>
+        </template>
+    </nav>
+
+    <!-- Modals -->
+    
+    <!-- 2FA Modal -->
+    <div x-show="show2FAModal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 backdrop-blur-md" x-transition.opacity>
+        <div class="glass-card w-full max-w-sm rounded-3xl p-8 relative border border-blue-500/30 shadow-2xl shadow-blue-500/20">
+            <div class="w-16 h-16 mx-auto bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mb-6">
+                <i class="fa-solid fa-shield-cat text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white text-center mb-2">Two-Factor Auth</h3>
+            <p class="text-xs text-gray-400 text-center mb-6">Enter the 6-digit code from your authenticator app.</p>
+            
+            <div class="space-y-4">
+                <input type="text" x-model="twoFactorCode" maxlength="6" class="w-full bg-black/50 border border-blue-500/50 rounded-xl px-4 py-4 text-center text-2xl tracking-[0.5em] font-mono text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-gray-700" placeholder="000000">
+                <button @click="verify2FA" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all">Verify Access</button>
+                <button @click="show2FAModal = false; twoFactorCode = ''" class="w-full py-2 text-gray-500 text-xs hover:text-white transition-colors">Cancel Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verification Modal (New) -->
+    <div x-show="showVerifyModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm" x-transition.opacity>
+        <div class="glass-card w-full max-w-sm rounded-3xl p-6 relative">
+            <button @click="showVerifyModal = false" class="absolute top-4 right-4 text-slate-500 dark:text-zinc-500 hover:text-slate-800 dark:hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            
+            <div class="w-12 h-12 bg-green-100 dark:bg-green-500/10 rounded-xl flex items-center justify-center text-green-600 dark:text-green-500 mb-4 mx-auto">
+                <i class="fa-solid fa-shield-halved text-xl"></i>
+            </div>
+            
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white text-center mb-2">Verify Phone Number</h3>
+            <p class="text-xs text-slate-500 dark:text-zinc-400 text-center mb-6">We need to verify your number to send WhatsApp alerts.</p>
+            
+            <div x-show="verifyStep === 'input'" class="space-y-4">
+                <input type="tel" x-model="profile.phone" placeholder="Phone Number" class="glass-input w-full rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500/50">
+                <button @click="sendOtp" class="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl shadow-lg shadow-green-600/20">Send OTP</button>
+            </div>
+            
+            <div x-show="verifyStep === 'otp'" class="space-y-4">
+                <p class="text-xs text-center text-slate-500 dark:text-zinc-300">Enter OTP sent to <span x-text="profile.phone" class="font-mono text-green-500 dark:text-green-400"></span></p>
+                <input type="text" x-model="otpInput" placeholder="Enter 4-digit OTP" class="glass-input w-full rounded-xl px-4 py-3 text-slate-900 dark:text-white text-center tracking-widest text-lg focus:outline-none focus:ring-2 focus:ring-green-500/50" maxlength="4">
+                <button @click="verifyOtp" class="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl shadow-lg shadow-green-600/20">Verify & Enable</button>
+                <button @click="verifyStep = 'input'" class="w-full py-2 text-slate-500 dark:text-zinc-500 hover:text-slate-800 dark:hover:text-white text-xs">Change Number</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div x-show="showForgotModal" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 backdrop-blur-md" x-transition.opacity>
+        <div class="glass-card w-full max-w-sm rounded-3xl p-8 relative border border-purple-500/30 shadow-2xl shadow-purple-500/20">
+            <button @click="showForgotModal = false" class="absolute top-4 right-4 text-slate-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            
+            <div class="w-16 h-16 mx-auto bg-purple-500/10 text-purple-500 rounded-full flex items-center justify-center mb-6">
+                <i class="fa-solid fa-key text-2xl"></i>
+            </div>
+            
+            <h3 class="text-xl font-bold text-white text-center mb-2" x-text="forgotStep === 1 ? 'Forgot Password' : (forgotStep === 2 ? 'Verify Code' : 'New Password')"></h3>
+            <p class="text-xs text-gray-400 text-center mb-6" x-text="forgotStep === 1 ? 'Enter email to receive reset code' : (forgotStep === 2 ? 'Enter the code sent to your email' : 'Set your new secure password')"></p>
+            
+            <!-- Step 1: Email -->
+            <div x-show="forgotStep === 1" class="space-y-4">
+                <input type="email" x-model="resetEmail" class="w-full bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Email Address">
+                <button @click="requestResetCode" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl shadow-lg shadow-purple-600/20 transition-all">Continue</button>
+            </div>
+
+            <!-- Step 2: Code -->
+            <div x-show="forgotStep === 2" class="space-y-4">
+                <input type="text" x-model="resetCode" maxlength="6" class="w-full bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-center text-xl tracking-widest text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="000000">
+                <button @click="verifyResetCode" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl shadow-lg shadow-purple-600/20 transition-all">Verify Code</button>
+                <button @click="forgotStep = 1" class="w-full py-2 text-gray-500 text-xs hover:text-white">Change Email</button>
+            </div>
+
+            <!-- Step 3: New Password -->
+            <div x-show="forgotStep === 3" class="space-y-4">
+                <input type="password" x-model="resetNewPass" class="w-full bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="New Password">
+                <button @click="resetPasswordFinal" class="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl shadow-lg shadow-green-600/20 transition-all">Update Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Premium Lock Modal -->
+    <div x-show="showPremiumModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" x-transition.opacity>
+        <div class="glass-card w-full max-w-sm rounded-3xl p-8 text-center relative border border-amber-500/30 shadow-2xl shadow-amber-500/10">
+            <button @click="showPremiumModal = false" class="absolute top-4 right-4 text-slate-500 dark:text-zinc-500 hover:text-slate-800 dark:hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            <div class="w-16 h-16 mx-auto bg-amber-100 dark:bg-amber-500/10 rounded-full flex items-center justify-center text-amber-500 mb-4 animate-bounce">
+                <i class="fa-solid fa-crown text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Premium Feature</h3>
+            <p class="text-sm text-slate-500 dark:text-zinc-400 mb-6">This feature requires a TraKr Premium subscription. Unlock all AI capabilities and advanced analytics.</p>
+            <button @click="buyPremium" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 transition-transform">Get Premium</button>
+        </div>
+    </div>
+
+    <!-- Dev Info Modal -->
+    <div x-show="showDevModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" x-transition.opacity>
+        <div class="glass-card w-full max-w-md rounded-3xl p-8 text-center relative border border-slate-200 dark:border-white/10">
+            <button @click="showDevModal = false" class="absolute top-4 right-4 text-slate-500 dark:text-zinc-500 hover:text-slate-800 dark:hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            <div class="w-20 h-20 mx-auto rounded-full overflow-hidden border-2 border-indigo-500 mb-4">
+                 <img src="assets/pbsingh.png" class="w-full h-full object-cover">
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-1">TraKr Dev Team</h3>
+            <p class="text-xs text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-widest mb-4">Full Stack Engineers</p>
+            <p class="text-sm text-slate-500 dark:text-zinc-400 mb-6 leading-relaxed">
+                Built with passion using modern web technologies. We aim to simplify personal life management through intelligent automation.
+            </p>
+            <div class="flex justify-center gap-4">
+                <a href="#" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center text-slate-800 dark:text-white transition-colors"><i class="fa-brands fa-github"></i></a>
+                <a href="#" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center text-blue-400 transition-colors"><i class="fa-brands fa-twitter"></i></a>
+                <a href="#" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center text-pink-500 transition-colors"><i class="fa-brands fa-instagram"></i></a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Goal Modal -->
+    <div x-show="showGoalModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" x-transition.opacity>
+         <div class="glass-card w-full max-w-sm rounded-3xl p-6 relative">
+            <h3 class="font-bold text-slate-900 dark:text-white mb-4">New Savings Goal</h3>
+            <input type="text" x-model="newGoalName" placeholder="Goal Name (e.g. New Car)" class="glass-input w-full rounded-xl px-4 py-3 mb-3 text-slate-900 dark:text-white focus:outline-none">
+            <input type="number" x-model="newGoalTarget" placeholder="Target Amount" class="glass-input w-full rounded-xl px-4 py-3 mb-4 text-slate-900 dark:text-white focus:outline-none">
+            <div class="flex gap-2">
+                <button @click="showGoalModal = false" class="flex-1 py-3 bg-slate-200 dark:bg-zinc-800 rounded-xl text-slate-600 dark:text-zinc-400 font-bold hover:bg-slate-300 dark:hover:bg-zinc-700 transition-colors">Cancel</button>
+                <button @click="addSavingsGoal" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold">Create</button>
+            </div>
+         </div>
+    </div>
+
+    <!-- Add Funds Modal -->
+    <div x-show="showFundsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" x-transition.opacity>
+         <div class="glass-card w-full max-w-sm rounded-3xl p-6 relative">
+            <h3 class="font-bold text-slate-900 dark:text-white mb-2" x-text="selectedGoal ? selectedGoal.name : 'Goal'"></h3>
+            <p class="text-xs text-slate-500 dark:text-zinc-400 mb-4">Add funds to this goal</p>
+            <input type="number" x-model="fundAmount" placeholder="Amount to add" class="glass-input w-full rounded-xl px-4 py-3 mb-4 text-slate-900 dark:text-white focus:outline-none">
+            <div class="flex gap-2">
+                <button @click="showFundsModal = false; fundAmount=''" class="flex-1 py-3 bg-slate-200 dark:bg-zinc-800 rounded-xl text-slate-600 dark:text-zinc-400 font-bold hover:bg-slate-300 dark:hover:bg-zinc-700 transition-colors">Cancel</button>
+                <button @click="addFundsToGoal" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold">Add Funds</button>
+            </div>
+            <button @click="deleteGoal" class="w-full mt-2 py-2 text-red-500 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg">Delete Goal</button>
+         </div>
+    </div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
